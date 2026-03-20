@@ -245,6 +245,73 @@ caseWrong:
 casePercent:
     ret 
 caseBin:
+        push rax
+    push rcx
+    push rsi
+    push rdi
+
+    xor r14, r14
+    mov r15b, 0d  ; flag to start print digits
+
+    mov rdi, saveBuffer
+    mov rcx, 64d
+
+    mov r12, 8000000000000000h ; mask for reg nibble
+
+    ; msb handle 
+    mov rax, r13
+    and rax, r12
+    shl rax, 63
+
+    cmp al, 0d
+    je .skipChangeFlagHighDig
+        mov r15b, 1d
+    .skipChangeFlagHighDig:
+
+    cmp r15b, 0d
+    je .notSignNumHighDig
+        add rax, DIFFERENCE_NUM_ASCII_L9 
+        stosb
+        inc r14
+    .notSignNumHighDig:
+
+    .hexToASCII:
+        mov rax, r13
+        and rax, r12
+
+        mov rsi, rcx
+        sub rsi, 1d
+
+        push rcx 
+        mov rcx, rsi
+        shr rax, cl
+        pop rcx 
+
+        
+        ; block exist for printing only significant digits(don't print numbers till first non zero)
+        cmp al, 0d
+        je .skipChangeFlag
+            mov r15b, 1d
+        .skipChangeFlag:
+
+        call convertNibbleToASCII   
+
+        shr r12, 1
+
+        cmp r15b, 0d
+        je .notSignNum
+            stosb
+            inc r14
+        .notSignNum:
+    loop .hexToASCII
+
+    mov byte [rdi], END_STR_SYM
+
+    pop rdi
+    pop rsi
+    pop rcx
+    pop rax
+
     ret 
 caseChar:
     ret 
@@ -516,7 +583,7 @@ specifierHandlersJmpTable:
 
 section .data
 
-Msg:    db "testStr %o and %o fdsa", 0x0a
+Msg:    db "testStr %b and %b fdsa", 0x0a
 MsgLen    equ $ - Msg
 
 partStrIndexes  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, END_STR_SYM
