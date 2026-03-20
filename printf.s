@@ -10,7 +10,7 @@ END_STR_SYM      equ 0x0a
 
 _start:
     push 10
-    push 25
+    push 1541
     push Msg
     call newPrintf
     
@@ -261,7 +261,7 @@ caseString:
 ;        r13 = argument specifier
 ; Exit:  r14 = amount of symbols drawn 
 ; Exp:   nop
-; Destr: r12, r13
+; Destr: r12, r13, r14, r15
 ;-----------------------------------------------------------------------
 
 caseHex:
@@ -269,6 +269,9 @@ caseHex:
     push rcx
     push rsi
     push rdi
+
+    xor r14, r14
+    mov r15b, 0d  ; flag to start print digits
 
     mov rdi, saveBuffer
     mov rcx, 16d
@@ -288,16 +291,25 @@ caseHex:
         shr rax, cl
         pop rcx 
 
+        
+        ; block exist for printing only significant digits(don't print numbers till first non zero)
+        cmp al, 0d
+        je ??skipChangeFlag
+            mov r15b, 1d
+        ??skipChangeFlag:
+
         call convertNibbleToASCII   
 
         shr r12, 4
 
-        stosb
+        cmp r15b, 0d
+        je ??notSignNum
+            stosb
+            inc r14
+        ??notSignNum:
     loop hexToASCII
 
     mov byte [rdi], END_STR_SYM
-
-    mov r14, 16
 
     pop rdi
     pop rsi
