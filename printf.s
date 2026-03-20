@@ -119,7 +119,7 @@ saveStartStrPart:
 ;        rdi = specifiersAmount
 ; Exit:  no
 ; Exp:   nop
-; Destr: rax, rbx, rcx, rsi, rdi, r8
+; Destr: rax, rbx, rcx, rsi, rdi, r8, r9
 ;-----------------------------------------------------------------------
 handleStrParts:
     xor rax, rax
@@ -127,6 +127,7 @@ handleStrParts:
     mov rsi, Msg
 
     xor r8, r8
+    xor r9, r9
 
     ; handle all str parts
     mov rcx, rdx
@@ -160,8 +161,8 @@ handleStrParts:
 
             jmp ??strCase
         ??specifierCase:
-
-        ; call handleSpecifier
+        mov r9b, [rsi + rax + 1]
+        call handleSpecifier
         ??strCase:
     loop ??handleStr
 
@@ -169,10 +170,8 @@ handleStrParts:
 
 ;-----------------------------------------------------------------------
 ; handles str part case
-; Entry: rax = Msg 
-;        rbx = MsgLen
-;        rdx = strPartsAmount
-;        rdi = specifiersAmount
+; Entry: rsi = curStrBufferPtr
+;        rdi = curPrintBufferPtr
 ; Exit:  no
 ; Exp:   nop
 ; Destr: rsi, rdi
@@ -187,8 +186,85 @@ handleStrPart:
 
     ret
 
-; replaceSpecifiers:
-;     ret 
+;-----------------------------------------------------------------------
+; handles specifiers
+; Entry: r9b = specifierTypeSym
+; Exit:  no
+; Exp:   nop
+; Destr: r9b
+;-----------------------------------------------------------------------
+handleSpecifier:
+    jmp [specifierHandlersJmpTable + r9 * 8]
+
+    ret 
+
+caseWrong:
+    mov rax, 0x01
+    mov rdi, 1d
+    mov rsi, wrongSpecifier
+    mov rdx, wrongSpecifierLen
+    syscall
+
+    mov rax, 0x3C
+    xor rdi, rdi
+    syscall
+casePercent:
+    ret 
+caseBin:
+    ret 
+caseChar:
+    ret 
+caseDec:
+    ret 
+caseOct:
+    ret 
+caseString:
+    ret 
+caseHex:
+    ret
+
+section .rodata
+align 8
+specifierHandlersJmpTable:
+    ; 0..36
+    times 37 dq caseWrong
+
+    ; 37 = '%'
+    dq casePercent
+
+    ; 38..97
+    times (98 - 38) dq caseWrong
+
+    ; 98 = 'b'
+    dq caseBin
+
+    ; 99 = 'c'
+    dq caseChar
+
+    ; 100 = 'd'
+    dq caseDec
+
+    ; 101..110
+    times (111 - 101) dq caseWrong
+
+    ; 111 = 'o'
+    dq caseOct
+
+    ; 112..114
+    times (115 - 112) dq caseWrong
+
+    ; 115 = 's'
+    dq caseString
+
+    ; 116..119
+    times (120 - 116) dq caseWrong
+
+    ; 120 = 'x'
+    dq caseHex
+
+    ; till 256
+    times (256 - 121) dq caseWrong
+
 
 section .data
 
@@ -199,3 +275,6 @@ partStrIndexes  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, END_STR_SYM
 
 saveBuffer:     db 100 dup(0), END_STR_SYM
 printBuffer:    db 100 dup(0), END_STR_SYM
+
+wrongSpecifier:    db "ERROR: wrongSpecifier", 0x0a
+wrongSpecifierLen    equ $ - wrongSpecifier
