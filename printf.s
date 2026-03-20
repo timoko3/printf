@@ -3,12 +3,14 @@ section .text
 global _start
 
 SPECIFIER_SYMBOL equ '%'
+
+DIFFERENCE_NUM_ASCII_L9   equ 48d
+DIFFERENCE_NUM_ASCII_G9   equ 55d
 END_STR_SYM      equ 0x0a
 
 _start:
-    push 3
-    push 2
-    push 1
+    push 10
+    push 25
     push Msg
     call newPrintf
     
@@ -42,7 +44,7 @@ newPrintf:
     mov rax, 0x01
     mov rdi, 1d
     mov rsi, printBuffer
-    mov rdx, MsgLen
+    mov rdx, printBufferLen
     syscall
 
     pop rbp
@@ -117,24 +119,28 @@ saveStartStrPart:
 ;        rbx = MsgLen
 ;        rdx = strPartsAmount
 ;        rdi = specifiersAmount
+;        [rbp + 16 + i * 8] = first arg
+;        ....
 ; Exit:  no
 ; Exp:   nop
-; Destr: rax, rbx, rcx, rsi, rdi, r8, r9
+; Destr: rax, rbx, rcx, rsi, rdi, r8, r9, r10, r11
 ;-----------------------------------------------------------------------
 handleStrParts:
     xor rax, rax
     xor rcx, rcx
     mov rsi, Msg
 
-    xor r8, r8
-    xor r9, r9
+    xor r8, r8  ; r8 contains cur printBuffer position 
+    xor r9, r9  ; r9b is used to transfer specifier type in its handler  
+    xor r10, r10
+    mov r10, 1
 
     ; handle all str parts
     mov rcx, rdx
     ??handleStr:
-        mov rdi, rdx 
-        sub rdi, rcx
-        mov al, byte [partStrIndexes + rdi]
+        mov r11, rdx 
+        sub r11, rcx
+        mov al, byte [partStrIndexes + r11]
         cmp byte [rsi + rax], SPECIFIER_SYMBOL
         je ??specifierCase
             push rcx 
@@ -142,8 +148,8 @@ handleStrParts:
             push rdi
 
             ; put in cl length current part str
-            mov cl, byte [partStrIndexes + rdi + 1d]
-            sub cl, byte [partStrIndexes + rdi]
+            mov cl, byte [partStrIndexes + r11 + 1d]
+            sub cl, byte [partStrIndexes + r11]
 
             ; count current printBuffer position
             mov rdi, printBuffer
@@ -160,9 +166,36 @@ handleStrParts:
             pop rcx
 
             jmp ??strCase
+
         ??specifierCase:
-        mov r9b, [rsi + rax + 1]
-        call handleSpecifier
+        ; r10 contains number of specifier to handle
+        ; put in rax argument for specifier from stack
+            push rcx 
+            push rsi 
+            push rdi
+
+            mov r9b, [rsi + rax + 1]
+
+            mov r13, [rbp + 16 + 8 * r10]
+
+            call handleSpecifier
+            inc r10
+
+            ; count current printBuffer position
+            mov rdi, printBuffer
+            add rdi, r8
+
+            ; count current str position            
+            mov rsi, saveBuffer
+
+            mov rcx, r14
+            rep movsb
+
+            add r8, r14
+
+            pop rdi
+            pop rsi     
+            pop rcx    
         ??strCase:
     loop ??handleStr
 
@@ -189,6 +222,7 @@ handleStrPart:
 ;-----------------------------------------------------------------------
 ; handles specifiers
 ; Entry: r9b = specifierTypeSym
+;        rax = argument specifier
 ; Exit:  no
 ; Exp:   nop
 ; Destr: r9b
@@ -220,8 +254,81 @@ caseOct:
     ret 
 caseString:
     ret 
+
+;-----------------------------------------------------------------------
+; handles specifiers
+; Entry: r9b = specifierTypeSym
+;        r13 = argument specifier
+; Exit:  r14 = amount of symbols drawn 
+; Exp:   nop
+; Destr: r12, r13
+;-----------------------------------------------------------------------
+
 caseHex:
+    push rax
+    push rcx
+    push rsi
+    push rdi
+
+    mov rdi, saveBuffer
+    mov rcx, 16d
+
+    mov r12, 0f000000000000000h ; mask for reg nibble
+
+    hexToASCII:
+        mov rax, r13
+        and rax, r12
+
+        mov rsi, rcx
+        sub rsi, 1d
+        shl rsi, 2
+
+        push rcx 
+        mov rcx, rsi
+        shr rax, cl
+        pop rcx 
+
+        call convertNibbleToASCII   
+
+        shr r12, 4
+
+        stosb
+    loop hexToASCII
+
+    mov byte [rdi], END_STR_SYM
+
+    mov r14, 16
+
+    pop rdi
+    pop rsi
+    pop rcx
+    pop rax
     ret
+
+;-----------------------------------------------------------------------
+; converts number in nibble to ASCII
+; Entry: rax = nibble
+;         
+; Exit:  rax = ASCII code
+; Exp:   no
+; Destr: ax
+;-----------------------------------------------------------------------
+convertNibbleToASCII:
+    ; case <= 9
+
+    cmp rax, 9d
+    jg ??G9
+        add rax, DIFFERENCE_NUM_ASCII_L9
+        jmp ??end
+
+    ??G9:
+
+    ; case > 9
+    
+    add rax, DIFFERENCE_NUM_ASCII_G9
+
+    ??end:
+    ret 
 
 section .rodata
 align 8
@@ -268,13 +375,15 @@ specifierHandlersJmpTable:
 
 section .data
 
-Msg:    db "testStr%dand%dfdsa", 0x0a
+Msg:    db "testStr %x and %x fdsa", 0x0a
 MsgLen    equ $ - Msg
 
 partStrIndexes  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, END_STR_SYM
 
 saveBuffer:     db 100 dup(0), END_STR_SYM
 printBuffer:    db 100 dup(0), END_STR_SYM
+
+printBufferLen equ $ - printBuffer
 
 wrongSpecifier:    db "ERROR: wrongSpecifier", 0x0a
 wrongSpecifierLen    equ $ - wrongSpecifier
