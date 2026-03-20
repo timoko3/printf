@@ -2,13 +2,16 @@ section .text
 
 global _start
 
-SPECIFIER_SYMBOL equ '%'
+SPECIFIER_SYMBOL          equ '%'
 
 DIFFERENCE_NUM_ASCII_L9   equ 48d
 DIFFERENCE_NUM_ASCII_G9   equ 55d
-END_STR_SYM      equ 0x0a
+NEW_LINE_SYM              equ 0x0a
+END_STR_SYM               equ 0x0
+
 
 _start:
+    push fillStr
     push 35
     push 33
     push Msg
@@ -80,7 +83,7 @@ countSpecifiers:
 
             jmp ??startCycle
         ??notSpecifier:
-        cmp byte [rax + rcx], END_STR_SYM
+        cmp byte [rax + rcx], NEW_LINE_SYM
         jne ??notEndStr
             mov rsi, partStrIndexes
             
@@ -205,6 +208,7 @@ handleStrParts:
 ; handles str part case
 ; Entry: rsi = curStrBufferPtr
 ;        rdi = curPrintBufferPtr
+;        cl  = length of str
 ; Exit:  no
 ; Exp:   nop
 ; Destr: rsi, rdi
@@ -215,7 +219,7 @@ handleStrPart:
         movsb
     loop ??handleByte
 
-    mov byte [rdi], END_STR_SYM
+    mov byte [rdi], NEW_LINE_SYM
 
     ret
 
@@ -318,7 +322,7 @@ caseBin:
         .notSignNum:
     loop .hexToASCII
 
-    mov byte [rdi], END_STR_SYM
+    mov byte [rdi], NEW_LINE_SYM
 
     pop rdi
     pop rsi
@@ -405,7 +409,7 @@ caseOct:
         .notSignNum:
     loop .hexToASCII
 
-    mov byte [rdi], END_STR_SYM
+    mov byte [rdi], NEW_LINE_SYM
 
     pop rdi
     pop rsi
@@ -413,6 +417,23 @@ caseOct:
     pop rax
     ret 
 caseString:
+    push rdi
+    push rsi
+    
+    mov rsi, r13
+    mov rdi, saveBuffer
+    .handleByte:
+        cmp byte [rsi], 0h
+        je .end 
+
+        movsb
+
+        inc r14
+    jmp .handleByte
+    .end:
+
+    pop rsi
+    pop rdi
     ret 
 
 ;-----------------------------------------------------------------------
@@ -468,7 +489,7 @@ caseHex:
         .notSignNum:
     loop .hexToASCII
 
-    mov byte [rdi], END_STR_SYM
+    mov byte [rdi], NEW_LINE_SYM
 
     pop rdi
     pop rsi
@@ -530,7 +551,7 @@ caseHex:
 ;         ??notSignNum:
 ;     loop hexToASCII
 
-;     mov byte [rdi], END_STR_SYM
+;     mov byte [rdi], NEW_LINE_SYM
 
 ;     pop rdi
 ;     pop rsi
@@ -609,13 +630,15 @@ specifierHandlersJmpTable:
 
 section .data
 
-Msg:    db "testStr %c and %c %% fdsa", 0x0a
+Msg:    db "testStr %c and %c %s fdsa", 0x0a
 MsgLen    equ $ - Msg
 
-partStrIndexes  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, END_STR_SYM
+fillStr db "filled", 0x0
 
-saveBuffer:     db 100 dup(0), END_STR_SYM
-printBuffer:    db 100 dup(0), END_STR_SYM
+partStrIndexes  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NEW_LINE_SYM
+
+saveBuffer:     db 100 dup(0), NEW_LINE_SYM
+printBuffer:    db 100 dup(0), NEW_LINE_SYM
 
 printBufferLen equ $ - printBuffer
 
