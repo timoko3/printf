@@ -9,8 +9,8 @@ DIFFERENCE_NUM_ASCII_G9   equ 55d
 END_STR_SYM      equ 0x0a
 
 _start:
-    push 10
-    push 1541
+    push 35
+    push 33
     push Msg
     call newPrintf
     
@@ -327,6 +327,19 @@ caseBin:
 
     ret 
 caseChar:
+    push rax
+    push rsi
+    xor r14, r14
+    inc r14 
+
+    mov rdi, saveBuffer
+    mov rax, r13
+    stosb
+
+
+    pop rsi 
+    pop rax
+
     ret 
 caseDec:
     ret 
@@ -596,7 +609,7 @@ specifierHandlersJmpTable:
 
 section .data
 
-Msg:    db "testStr %b and %b %% fdsa", 0x0a
+Msg:    db "testStr %c and %c %% fdsa", 0x0a
 MsgLen    equ $ - Msg
 
 partStrIndexes  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, END_STR_SYM
