@@ -243,9 +243,22 @@ caseWrong:
     xor rdi, rdi
     syscall
 casePercent:
+    push rax
+    push rsi
+    xor r14, r14
+    inc r14
+    dec r10 
+
+    mov rdi, saveBuffer
+    mov rax, '%'
+    stosb
+
+
+    pop rsi 
+    pop rax
     ret 
 caseBin:
-        push rax
+    push rax
     push rcx
     push rsi
     push rdi
@@ -390,7 +403,7 @@ caseString:
     ret 
 
 ;-----------------------------------------------------------------------
-; handles specifiers
+; converts reg value to showable hex
 ; Entry: r13 = argument specifier
 ; Exit:  r14 = amount of symbols drawn 
 ; Exp:   nop
@@ -583,7 +596,7 @@ specifierHandlersJmpTable:
 
 section .data
 
-Msg:    db "testStr %b and %b fdsa", 0x0a
+Msg:    db "testStr %b and %b %% fdsa", 0x0a
 MsgLen    equ $ - Msg
 
 partStrIndexes  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, END_STR_SYM
