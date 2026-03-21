@@ -15,7 +15,7 @@ MAX_DEC_NUM_LEN           equ 20d
 _start:
     push fillStr
     push 35
-    push 15454335
+    push 0
     push Msg
     call newPrintf
     
@@ -384,13 +384,16 @@ caseDec:
         dec rdi 
     loop .fixOverfilledDigits
 
+    mov rcx, 19d
     .startFindFirstSignificantDigit:
-    cmp byte [rsi], DIFFERENCE_NUM_ASCII_L9
-    jne .endFindFirstSignificantDigit
+        cmp byte [rsi], DIFFERENCE_NUM_ASCII_L9
+        jne .endFindFirstSignificantDigit
+
         inc rsi
-        jmp .startFindFirstSignificantDigit
+    loop .startFindFirstSignificantDigit
     .endFindFirstSignificantDigit:
     mov r14, rsi
+
 
     pop rdi
     pop rsi
