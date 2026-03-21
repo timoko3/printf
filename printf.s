@@ -9,11 +9,13 @@ DIFFERENCE_NUM_ASCII_G9   equ 55d
 NEW_LINE_SYM              equ 0x0a
 END_STR_SYM               equ 0x0
 
+MAX_DEC_NUM_LEN           equ 20d
+
 
 _start:
     push fillStr
     push 35
-    push 33
+    push 15454335
     push Msg
     call newPrintf
     
@@ -181,15 +183,15 @@ handleStrParts:
 
             mov r13, [rbp + 16 + 8 * r10]
 
+            ; count current str position            
+            mov rsi, saveBuffer
+
             call handleSpecifier
             inc r10
 
             ; count current printBuffer position
             mov rdi, printBuffer
             add rdi, r8
-
-            ; count current str position            
-            mov rsi, saveBuffer
 
             mov rcx, r14
             rep movsb
@@ -275,23 +277,6 @@ caseBin:
 
     mov r12, 8000000000000000h ; mask for reg nibble
 
-    ; msb handle 
-    mov rax, r13
-    and rax, r12
-    shl rax, 63
-
-    cmp al, 0d
-    je .skipChangeFlagHighDig
-        mov r15b, 1d
-    .skipChangeFlagHighDig:
-
-    cmp r15b, 0d
-    je .notSignNumHighDig
-        add rax, DIFFERENCE_NUM_ASCII_L9 
-        stosb
-        inc r14
-    .notSignNumHighDig:
-
     .hexToASCII:
         mov rax, r13
         and rax, r12
@@ -340,13 +325,160 @@ caseChar:
     mov rax, r13
     stosb
 
-
     pop rsi 
     pop rax
 
-    ret 
+    ret
+
+;-----------------------------------------------------------------------
+; handles specifiers
+; Entry: r9b = specifierTypeSym
+;        rax = argument specifier
+; Exit:  no
+; Exp:   nop
+; Destr: r9b
+;----------------------------------------------------------------------- 
 caseDec:
+    push rax
+    push rcx
+    push rsi
+    push rdi    
+
+    xor r14, r14
+    ; mov r15b, 0d  ; flag to start print digits
+
+    mov rdi, saveBuffer + MAX_DEC_NUM_LEN - 1d
+
+    mov rcx, MAX_DEC_NUM_LEN    
+    .prepareSaveBuffer: 
+        not rcx
+        add rcx, 1d
+        mov byte [rdi + rcx + 1], DIFFERENCE_NUM_ASCII_L9
+        sub rcx, 1d
+        not rcx
+    loop .prepareSaveBuffer
+
+    mov rcx, 64d
+    mov r12, 8000000000000000h ; mask for reg nibble
+
+    .hexToASCII:
+        mov rax, r13
+        and rax, r12
+        
+        call subTenPows
+
+        shr r12, 1
+
+    loop .hexToASCII
+
+    mov rsi, saveBuffer
+
+    mov rcx, 19d    
+    .fixOverfilledDigits: 
+
+        mov al, byte [rsi + rcx]
+        sub al, DIFFERENCE_NUM_ASCII_L9
+        mov byte [rsi + rcx], DIFFERENCE_NUM_ASCII_L9
+        call subTenPows
+
+        dec rdi 
+    loop .fixOverfilledDigits
+
+    pop rdi
+    pop rsi
+    pop rcx
+    pop rax
+
+    mov rsi, saveBuffer 
+    add rsi, MAX_DEC_NUM_LEN
+    sub rsi, r14
+
     ret 
+
+subTenPows:
+    push rbx
+    push rcx 
+    push rdx 
+
+
+    ; prepare data rbx = curNumber to handle 
+    mov rbx, rax
+    mov rax, 1
+
+    ; cycle 
+    mov r9, 10
+    
+    xor rcx, rcx
+
+    .startFindMaxPowTenInNum:   
+    cmp rbx, rax  
+    jl .endFindMaxPowTenInNum
+        mul r9 
+        inc rcx 
+    jmp .startFindMaxPowTenInNum
+    .endFindMaxPowTenInNum:
+
+    ;division by 10 rax 
+    mov rdx, 0xCCCCCCCCCCCCCCCD
+    mul rdx
+    shr rdx, 3
+    mov rax, rdx
+    
+    dec rcx
+
+    mov rdx, rcx
+    ;divide in digits cycle 
+
+    cmp r14, rdx
+    jg  .notGreaterDigit
+        mov r14, rdx
+        add r14, 1d
+    .notGreaterDigit:
+
+    .divideNumInDigits:
+    cmp rbx, 0d 
+    jle .endDivideNumInDigits  
+
+        .startOfCurPowTen:
+        cmp rbx, rax
+        jl .endOfCurPowTen 
+            sub rbx, rax
+
+            not rdx 
+            add rdx, 1d
+            add byte [rdi + rdx], 1
+            sub rdx, 1d
+            not rdx
+
+        jmp .startOfCurPowTen  
+        .endOfCurPowTen:
+
+        dec rdx
+
+        ;prepare next pow ten
+        mov rcx, rdx
+        mov rax, 1d
+
+        .startGetNewPowTen:
+        cmp rcx, 0d
+        jle .endGetNewPowTen     
+        .getNewPowTen:
+            push rdx
+            mul r9
+            dec rcx
+            pop rdx
+        jmp .startGetNewPowTen 
+        .endGetNewPowTen:
+
+    jmp .divideNumInDigits
+
+    .endDivideNumInDigits:
+
+    pop rdx
+    pop rcx 
+    pop rbx
+    ret 
+
 caseOct:
     push rax
     push rcx
@@ -420,6 +552,8 @@ caseString:
     push rdi
     push rsi
     
+    xor r14, r14
+
     mov rsi, r13
     mov rdi, saveBuffer
     .handleByte:
@@ -497,69 +631,6 @@ caseHex:
     pop rax
     ret
 
-; ;-----------------------------------------------------------------------
-; ; prepares number pow2 for show
-; ; Entry: r13 = argument specifier
-; ;        r8  = mask
-; ;        r9  = amount digits masks
-; ; Exit:  r14 = amount of symbols drawn 
-; ; Exp:   nop
-; ; Destr: r12, r13, r14, r15
-; ;-----------------------------------------------------------------------
-; makePow2NumReadyShow:
-;     push rax
-;     push rcx
-;     push rsi
-;     push rdi
-
-;     xor r14, r14
-;     mov r15b, 0d  ; flag to start print digits
-
-;     mov rdi, saveBuffer
-;     mov rcx, 16d
-
-;     mov r12, r8 ; mask for reg nibble
-
-;     hexToASCII:
-;         mov rax, r13
-;         and rax, r12
-
-;         mov rsi, rcx
-;         sub rsi, 1d
-;         shl rsi, 2
-
-;         push rcx 
-;         mov rcx, rsi
-;         shr rax, cl
-;         pop rcx 
-
-        
-;         ; block exist for printing only significant digits(don't print numbers till first non zero)
-;         cmp al, 0d
-;         je ??skipChangeFlag
-;             mov r15b, 1d
-;         ??skipChangeFlag:
-
-;         call convertNibbleToASCII   
-
-;         shr r12, 4
-
-;         cmp r15b, 0d
-;         je ??notSignNum
-;             stosb
-;             inc r14
-;         ??notSignNum:
-;     loop hexToASCII
-
-;     mov byte [rdi], NEW_LINE_SYM
-
-;     pop rdi
-;     pop rsi
-;     pop rcx
-;     pop rax
-;     ret
-
-
 ;-----------------------------------------------------------------------
 ; converts number in nibble to ASCII
 ; Entry: rax = nibble
@@ -630,7 +701,7 @@ specifierHandlersJmpTable:
 
 section .data
 
-Msg:    db "testStr %c and %c %s fdsa", 0x0a
+Msg:    db "testStr %d and %d %s fdsa", 0x0a
 MsgLen    equ $ - Msg
 
 fillStr db "filled", 0x0
