@@ -1,0 +1,11 @@
+
+*.o
+
+*.log
+.gdb_history
+
+.fuse_hidden*
+
+# 🔹 IDE
+.vscode/
+.idea/
