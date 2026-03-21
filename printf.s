@@ -384,14 +384,22 @@ caseDec:
         dec rdi 
     loop .fixOverfilledDigits
 
+    .startFindFirstSignificantDigit:
+    cmp byte [rsi], DIFFERENCE_NUM_ASCII_L9
+    jne .endFindFirstSignificantDigit
+        inc rsi
+        jmp .startFindFirstSignificantDigit
+    .endFindFirstSignificantDigit:
+    mov r14, rsi
+
     pop rdi
     pop rsi
     pop rcx
     pop rax
 
-    mov rsi, saveBuffer 
-    add rsi, MAX_DEC_NUM_LEN
-    sub rsi, r14
+    mov rsi, r14 
+    mov r14, saveBuffer + MAX_DEC_NUM_LEN
+    sub r14, rsi
 
     ret 
 
