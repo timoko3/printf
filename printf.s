@@ -14,11 +14,18 @@ MAX_DEC_NUM_LEN           equ 20d
 
 _start:
     push fillStr
-    push 35
-    push 0
+    push -34655
+
+    ; sub rsp, 8
+    ; movss xmm0, [testFloat]
+    ; movss [rsp], xmm0
+
+    push 6516
+
     push Msg
     call newPrintf
-    
+    ; add rsp, 8
+
     mov rax, 0x3C
     xor rdi, rdi
     syscall
@@ -238,6 +245,21 @@ handleSpecifier:
 
     ret 
 
+caseFloat:
+    push rax
+    push rcx
+    push rsi
+    push rdi
+
+
+    
+
+
+    pop rdi 
+    pop rsi 
+    pop rcx 
+    pop rax 
+    ret
 caseWrong:
     mov rax, 0x01
     mov rdi, 1d
@@ -345,7 +367,6 @@ caseDec:
     push rdi    
 
     xor r14, r14
-    ; mov r15b, 0d  ; flag to start print digits
 
     mov rdi, saveBuffer + MAX_DEC_NUM_LEN - 1d
 
@@ -358,8 +379,17 @@ caseDec:
         not rcx
     loop .prepareSaveBuffer
 
-    mov rcx, 64d
-    mov r12, 8000000000000000h ; mask for reg nibble
+    mov rcx, 31d
+    mov r12, 40000000h ; mask for reg nibble
+
+    xor r15b, r15b
+
+    test r13d, 80000000h
+    jns .notNegativeNum
+        not r13
+        inc r13
+        mov r15b, 1d  ; flag to start print digits
+    .notNegativeNum:
 
     .hexToASCII:
         mov rax, r13
@@ -392,6 +422,12 @@ caseDec:
         inc rsi
     loop .startFindFirstSignificantDigit
     .endFindFirstSignificantDigit:
+
+    test r15b, 1d
+    jz .notNegativeNum2
+        dec rsi
+        mov byte [rsi], '-'
+    .notNegativeNum2:
     mov r14, rsi
 
 
@@ -688,8 +724,12 @@ specifierHandlersJmpTable:
     ; 100 = 'd'
     dq caseDec
 
+    dq caseWrong
+
+    dq caseFloat
+
     ; 101..110
-    times (111 - 101) dq caseWrong
+    times (111 - 103) dq caseWrong
 
     ; 111 = 'o'
     dq caseOct
@@ -716,6 +756,8 @@ Msg:    db "testStr %d and %d %s fdsa", 0x0a
 MsgLen    equ $ - Msg
 
 fillStr db "filled", 0x0
+
+testFloat dd 3.14
 
 partStrIndexes  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NEW_LINE_SYM
 
