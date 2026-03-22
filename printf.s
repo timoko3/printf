@@ -370,13 +370,37 @@ caseFloat:
         dec rdi 
     loop .fixOverfilledDigitsMantis
 
+    ; start find first significant digit of whole part in saveBuffer
+    mov rsi, saveBuffer
+    mov rcx, 19d
+    .startFindFirstSignificantDigit:
+        cmp byte [rsi], DIFFERENCE_NUM_ASCII_L9
+        jne .endFindFirstSignificantDigit
+
+        inc rsi
+    loop .startFindFirstSignificantDigit
+    .endFindFirstSignificantDigit:
+    mov r14, rsi
+
+    ; copy mantissa part 
+    mov byte [saveBuffer + MAX_DEC_NUM_LEN], '.'
+    mov rsi, floatBuffer
+    mov rdi, saveBuffer + MAX_DEC_NUM_LEN + 1
+    mov rcx, 6d ; 6 - threshold of unary accuracy
+    rep movsb 
+
 
     pop rdi 
     pop rsi 
     pop rdx
     pop rcx 
     pop rbx
-    pop rax 
+    pop rax
+
+    mov rsi, r14 
+    mov r14, saveBuffer + MAX_DEC_NUM_LEN + 7d
+    sub r14, rsi
+
     ret
 
 mantisHandle:
@@ -393,28 +417,6 @@ mantisHandle:
     add rcx, 1d 
 
     add rdi, rcx
-
-    ; jmp [floatShiftJmpTable + rcx * 8] 
-
-    ; oneShift:
-    ;     add rdi, 1
-    ;     jmp noShift
-    ; twoShift:
-    ;     add rdi, 2
-    ;     jmp noShift
-    ; threeShift:
-    ;     add rdi, 3
-    ;     jmp noShift
-    ; fourShift:
-    ;     add rdi, 4
-    ;     jmp noShift
-    ; fiveShift:
-    ;     add rdi, 5
-    ;     jmp noShift
-    ; sixShift:
-    ;     add rdi, 6
-    ;     jmp noShift
-    ; noShift:
 
     ; put rax appropriate pow 5
     test rax, rax
@@ -436,21 +438,6 @@ mantisHandle:
     pop rcx 
     pop rbx
     ret 
-
-; floatShiftJmpTable:
-;     times 3 dq noShift
-    
-;     times 3 dq oneShift
-
-;     times 3 dq twoShift
-
-;     times 4 dq threeShift
-
-;     times 3 dq fourShift
-
-;     times 3 dq fiveShift
-
-;     times 4 dq sixShift
 
 caseWrong:
     mov rax, 0x01
@@ -949,7 +936,7 @@ MsgLen    equ $ - Msg
 
 fillStr db "filled", 0x0
 
-testFloat dd 3.14
+testFloat dd 3.144894554
 
 partStrIndexes  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NEW_LINE_SYM
 
