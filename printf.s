@@ -248,6 +248,28 @@ handleSpecifier:
     ret 
 
 caseFloat:
+    ; is INF test 
+    cmp r13, 7f800000h
+    jne .notInfCase
+        mov byte [saveBuffer], 'I'
+        mov byte [saveBuffer + 1], 'N'
+        mov byte [saveBuffer + 2], 'F'
+
+        mov r14, 3d 
+        ret 
+    .notInfCase:
+
+    ; is NAN test
+    test r13, 7f800000h
+    jz .notNanCase
+        mov byte [saveBuffer], 'N'
+        mov byte [saveBuffer + 1], 'A'
+        mov byte [saveBuffer + 2], 'N'
+
+        mov r14, 3d 
+        ret 
+    .notNanCase:
+
     push rax
     push rbx
     push rcx
@@ -256,6 +278,8 @@ caseFloat:
     push rdi
 
     xor r14, r14
+
+
 
     mov rdi, saveBuffer + MAX_DEC_NUM_LEN - 1d
 
@@ -942,7 +966,7 @@ MsgLen    equ $ - Msg
 
 fillStr db "filled", 0x0
 
-testFloat dd -634.1446
+testFloat dd 07F800f00h
 
 partStrIndexes  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NEW_LINE_SYM
 
