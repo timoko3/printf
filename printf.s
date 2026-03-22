@@ -11,20 +11,21 @@ END_STR_SYM               equ 0x0
 
 MAX_DEC_NUM_LEN           equ 20d
 
+FLOAT_BIAS                equ 127d
 
 _start:
     push fillStr
     push -34655
 
-    ; sub rsp, 8
-    ; movss xmm0, [testFloat]
-    ; movss [rsp], xmm0
+    sub rsp, 8
+    movss xmm0, [testFloat]
+    movss [rsp], xmm0
 
-    push 6516
+    ; push 6516
 
     push Msg
     call newPrintf
-    ; add rsp, 8
+    add rsp, 8
 
     mov rax, 0x3C
     xor rdi, rdi
@@ -247,17 +248,77 @@ handleSpecifier:
 
 caseFloat:
     push rax
+    push rbx
     push rcx
+    push rdx 
     push rsi
     push rdi
 
+    xor r14, r14
 
+    mov rdi, floatBuffer + MAX_DEC_NUM_LEN - 1d
+
+    mov rcx, MAX_DEC_NUM_LEN    
+    .prepareSaveBuffer: 
+        not rcx
+        add rcx, 1d
+        mov byte [rdi + rcx + 1], DIFFERENCE_NUM_ASCII_L9
+        sub rcx, 1d
+        not rcx
+    loop .prepareSaveBuffer
     
+    ; handle exp
+
+    mov r12, 7f800000h ; mask for exp    
+    mov rcx, 8d    
+    
+    mov rax, r13
+    and rax, r12
+
+    shr rax, 23d
+
+    mov rdx, rax
+    sub rdx, 127
+    
+    ; normalized case
+
+    ; whole part
+    mov rax, r13
+
+    or rax, 00800000h 
+
+    mov r12, 00400000h
+    mov rcx, rdx
+    mov rbx, r12 
+    
+    .createMask
+        shr rbx, 1d
+        add rcx, rbx 
+    loop .createMask 
+
+    ; mantis handle 
+    mov r12, 00400000h
+    mov rcx, 23d 
+    ; which bits interpret as mantis
+    sub rcx, rdx, which bytes
+    shr r12
+
+    .hexToASCII:
+        mov rax, r13
+        and rax, r12
+        
+        call subTenPows
+
+        shr r12, 1
+
+    loop .hexToASCII
 
 
     pop rdi 
     pop rsi 
+    pop rdx
     pop rcx 
+    pop rbx
     pop rax 
     ret
 caseWrong:
@@ -380,7 +441,7 @@ caseDec:
     loop .prepareSaveBuffer
 
     mov rcx, 31d
-    mov r12, 40000000h ; mask for reg nibble
+    mov r12, 40000000h
 
     xor r15b, r15b
 
@@ -752,7 +813,7 @@ specifierHandlersJmpTable:
 
 section .data
 
-Msg:    db "testStr %d and %d %s fdsa", 0x0a
+Msg:    db "testStr %f and %d %s fdsa", 0x0a
 MsgLen    equ $ - Msg
 
 fillStr db "filled", 0x0
@@ -765,6 +826,8 @@ saveBuffer:     db 100 dup(0), NEW_LINE_SYM
 printBuffer:    db 100 dup(0), NEW_LINE_SYM
 
 printBufferLen equ $ - printBuffer
+
+floatBuffer    db 30 dup(0), NEW_LINE_SYM
 
 wrongSpecifier:    db "ERROR: wrongSpecifier", 0x0a
 wrongSpecifierLen    equ $ - wrongSpecifier
