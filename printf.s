@@ -336,8 +336,10 @@ caseFloat:
     loop .fixOverfilledDigits
 
     ; mantis handle 
-    mov r12, 00000001h
+    mov r12, 00400000h
     ; which bits interpret as mantis
+    mov rcx, rdx 
+    shr r12, cl
 
     mov rcx, 23d 
     sub rcx, rdx
@@ -351,13 +353,13 @@ caseFloat:
         
         call mantisHandle
 
-        shl r12, 1
+        shr r12, 1
 
     loop .hexToASCIIMantisPart
 
-    mov rdi, floatBuffer + 23d
+    mov rdi, floatBuffer + 22d
     mov rsi, floatBuffer
-    mov rcx, 23d    
+    mov rcx, 22d    
     .fixOverfilledDigitsMantis: 
 
         mov al, byte [rsi + rcx]
@@ -383,36 +385,43 @@ mantisHandle:
     push rdx 
     push r15
 
-    mov rdi, floatBuffer + 1
+    mov rdi, floatBuffer
+    
 
+    sub rcx, r15 
+    not rcx
+    add rcx, 1d 
 
-    jmp [floatShiftJmpTable + rcx * 8] 
+    add rdi, rcx
 
-    oneShift:
-        add rdi, 1
-        jmp noShift
-    twoShift:
-        add rdi, 2
-        jmp noShift
-    threeShift:
-        add rdi, 3
-        jmp noShift
-    fourShift:
-        add rdi, 4
-        jmp noShift
-    fiveShift:
-        add rdi, 5
-        jmp noShift
-    sixShift:
-        add rdi, 6
-        jmp noShift
-    noShift:
+    ; jmp [floatShiftJmpTable + rcx * 8] 
+
+    ; oneShift:
+    ;     add rdi, 1
+    ;     jmp noShift
+    ; twoShift:
+    ;     add rdi, 2
+    ;     jmp noShift
+    ; threeShift:
+    ;     add rdi, 3
+    ;     jmp noShift
+    ; fourShift:
+    ;     add rdi, 4
+    ;     jmp noShift
+    ; fiveShift:
+    ;     add rdi, 5
+    ;     jmp noShift
+    ; sixShift:
+    ;     add rdi, 6
+    ;     jmp noShift
+    ; noShift:
 
     ; put rax appropriate pow 5
     test rax, rax
     jz .zeroDigit
     mov rax, 1
     mov rbx, 5d
+    inc rcx 
     .getAppropriatePowFive:
         mul rbx
     loop .getAppropriatePowFive
@@ -428,20 +437,20 @@ mantisHandle:
     pop rbx
     ret 
 
-floatShiftJmpTable:
-    times 3 dq noShift
+; floatShiftJmpTable:
+;     times 3 dq noShift
     
-    times 3 dq oneShift
+;     times 3 dq oneShift
 
-    times 3 dq twoShift
+;     times 3 dq twoShift
 
-    times 4 dq threeShift
+;     times 4 dq threeShift
 
-    times 3 dq fourShift
+;     times 3 dq fourShift
 
-    times 3 dq fiveShift
+;     times 3 dq fiveShift
 
-    times 4 dq sixShift
+;     times 4 dq sixShift
 
 caseWrong:
     mov rax, 0x01
@@ -940,7 +949,7 @@ MsgLen    equ $ - Msg
 
 fillStr db "filled", 0x0
 
-testFloat dd 2.125
+testFloat dd 3.14
 
 partStrIndexes  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NEW_LINE_SYM
 
