@@ -12,6 +12,7 @@ END_STR_SYM               equ 0x0
 MAX_DEC_NUM_LEN           equ 20d
 
 FLOAT_BIAS                equ 127d
+FLOAT_AFTER_DOT_LEN       equ 6d
 
 _start:
     push fillStr
@@ -256,7 +257,7 @@ caseFloat:
 
     xor r14, r14
 
-    mov rdi, floatBuffer + MAX_DEC_NUM_LEN - 1d
+    mov rdi, saveBuffer + MAX_DEC_NUM_LEN - 1d
 
     mov rcx, MAX_DEC_NUM_LEN    
     .prepareSaveBuffer: 
@@ -284,34 +285,74 @@ caseFloat:
 
     ; whole part
     mov rax, r13
-
+    and rax, 00ffffffh
     or rax, 00800000h 
 
-    mov r12, 00400000h
+    mov r12, 00800000h
     mov rcx, rdx
     mov rbx, r12 
     
-    .createMask
+    .createMask:
         shr rbx, 1d
-        add rcx, rbx 
+        add r12, rbx 
     loop .createMask 
 
-    ; mantis handle 
-    mov r12, 00400000h
-    mov rcx, 23d 
-    ; which bits interpret as mantis
-    sub rcx, rdx, which bytes
-    shr r12
+    xor rcx, rcx
+    mov rcx, 23
+    sub rcx, rdx
 
-    .hexToASCII:
-        mov rax, r13
+    and rax, r12
+    shr rax, cl
+
+    mov r15, rax
+
+    ; saveToBuffer
+    xor r14, r14
+
+    mov rcx, 24d
+    mov r12, 00800000h
+
+    .hexToASCIIWhlPrt:
+        mov rax, r15
         and rax, r12
         
         call subTenPows
 
         shr r12, 1
+    loop .hexToASCIIWhlPrt
 
-    loop .hexToASCII
+
+    ;fix whole part overfilled digits
+    mov rsi, saveBuffer
+    mov rcx, 19d    
+    .fixOverfilledDigits: 
+
+        mov al, byte [rsi + rcx]
+        sub al, DIFFERENCE_NUM_ASCII_L9
+        mov byte [rsi + rcx], DIFFERENCE_NUM_ASCII_L9
+        call subTenPows
+
+        dec rdi 
+    loop .fixOverfilledDigits
+
+    call mantisHandle
+
+    ; ; mantis handle 
+    ; mov r12, 00400000h
+    ; mov rcx, 23d 
+    ; ; which bits interpret as mantis
+    ; sub rcx, rdx, which bytes
+    ; shr r12
+
+    ; .hexToASCII:
+    ;     mov rax, r13
+    ;     and rax, r12
+        
+    ;     call subTenPows
+
+    ;     shr r12, 1
+
+    ; loop .hexToASCII
 
 
     pop rdi 
@@ -321,6 +362,9 @@ caseFloat:
     pop rbx
     pop rax 
     ret
+
+mantisHandle:
+    ret 
 caseWrong:
     mov rax, 0x01
     mov rdi, 1d
