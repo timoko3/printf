@@ -390,6 +390,12 @@ caseFloat:
     rep movsb 
 
 
+    test r13d, 80000000h
+    jz .notNegative 
+        dec r14
+        mov byte [r14], '-'
+    .notNegative:
+
     pop rdi 
     pop rsi 
     pop rdx
@@ -936,7 +942,7 @@ MsgLen    equ $ - Msg
 
 fillStr db "filled", 0x0
 
-testFloat dd 3.144894554
+testFloat dd -634.1446
 
 partStrIndexes  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NEW_LINE_SYM
 
