@@ -2,6 +2,8 @@ section .text
 
 global _start
 
+global myPrintfWrap
+
 SPECIFIER_SYMBOL          equ '%'
 
 DIFFERENCE_NUM_ASCII_L9   equ 48d
@@ -14,27 +16,50 @@ MAX_DEC_NUM_LEN           equ 20d
 FLOAT_BIAS                equ 127d
 FLOAT_AFTER_DOT_LEN       equ 6d
 
-_start:
-    push 0123
-    push 33
-    push 31
-    push 100
-    push 3802
-    push fillStr
+; _start:
+;     push 0123
+;     push 33
+;     push 31
+;     push 100
+;     push 3802
+;     push fillStr
+
+;     ; sub rsp, 8
+;     ; movss xmm0, [testFloat]
+;     ; movss [rsp], xmm0
+
+;     push -1
+
+;     push Msg
+;     call newPrintf
+;     add rsp, 8
+
+;     mov rax, 0x3C
+;     xor rdi, rdi
+;     syscall
+
+
+myPrintfWrap:
+    push rbp 
+    mov rbp, rsp 
+
+    push qword [rbp + 16]
+    push r9
+    push r8
+    push rcx
+    push rdx
 
     ; sub rsp, 8
     ; movss xmm0, [testFloat]
     ; movss [rsp], xmm0
 
-    push -1
-
-    push Msg
+    push rsi
+    push rdi
     call newPrintf
-    add rsp, 8
+    add rsp, 56
 
-    mov rax, 0x3C
-    xor rdi, rdi
-    syscall
+    pop rbp
+    ret 
 
 ;-----------------------------------------------------------------------
 ; printf function from c
@@ -49,13 +74,16 @@ newPrintf:
     push rbp 
     mov rbp, rsp 
 
-    mov rbx, MsgLen
+    mov rsi, [rbp + 16]
+    call strlen
+    mov rbx, rcx
     mov rax, [rbp + 16]
     call countSpecifiers 
     
-    mov rbx, MsgLen
+    mov rsi, [rbp + 16]
+    call strlen
+    mov rbx, rcx
     mov rax, [rbp + 16]
-    
     
     call handleStrParts
 
@@ -151,9 +179,9 @@ saveStartStrPart:
 ; Destr: rax, rbx, rcx, rsi, rdi, r8, r9, r10, r11
 ;-----------------------------------------------------------------------
 handleStrParts:
+    mov rsi, rax
     xor rax, rax
     xor rcx, rcx
-    mov rsi, Msg
 
     xor r8, r8  ; r8 contains cur printBuffer position 
     xor r9, r9  ; r9b is used to transfer specifier type in its handler  
@@ -927,6 +955,30 @@ convertNibbleToASCII:
     ??end:
     ret 
 
+;-----------------------------------------------------------------------
+; counts amount of symbols in str with endStr symbol '$'
+; Entry: rsi = pointer to the begin of str
+; Exit:  rcx = length str
+; Exp:   dh = ensStr symbol ASCII code
+; Destr: ah, cx, di
+;-----------------------------------------------------------------------
+
+strlen:
+	mov rdi, rsi
+	xor rcx, rcx
+	
+	strlenCycle:
+	mov al, byte [rdi]
+
+	cmp al, END_STR_SYM
+	je strlenEnd
+	inc rdi
+
+	inc rcx    ; increment symbols counter
+	jmp strlenCycle
+	strlenEnd:
+	ret
+
 section .rodata
 align 8
 specifierHandlersJmpTable:
@@ -976,8 +1028,8 @@ specifierHandlersJmpTable:
 
 section .data
 
-Msg:    db "%d %s  %x %d%%%b%c", 0x0a
-MsgLen    equ $ - Msg
+; Msg:    db "%d %s  %x %d%%%b%c", 0x0a
+; MsgLen    equ $ - Msg
 
 fillStr db "love", 0x0
 
