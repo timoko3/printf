@@ -15,14 +15,18 @@ FLOAT_BIAS                equ 127d
 FLOAT_AFTER_DOT_LEN       equ 6d
 
 _start:
+    push 0123
+    push 33
+    push 31
+    push 100
+    push 3802
     push fillStr
-    push -34655
 
-    sub rsp, 8
-    movss xmm0, [testFloat]
-    movss [rsp], xmm0
+    ; sub rsp, 8
+    ; movss xmm0, [testFloat]
+    ; movss [rsp], xmm0
 
-    ; push 6516
+    push -1
 
     push Msg
     call newPrintf
@@ -78,6 +82,8 @@ countSpecifiers:
     xor rdi, rdi
     xor rcx, rcx 
     
+    mov r9, rbx
+
     ??startCycle:
     cmp rcx, rbx
     jge ??endCycle
@@ -85,8 +91,13 @@ countSpecifiers:
         jne ??notSpecifier
             inc rdi
             mov rsi, partStrIndexes
-            
+
+            cmp r9, rbx 
+            je .notSaveStart 
+
             call saveStartStrPart
+
+            .notSaveStart:
 
             ;skip specifier part
             add rcx, 2
@@ -226,9 +237,14 @@ handleStrParts:
 ;-----------------------------------------------------------------------
 handleStrPart:  
     
-    ??handleByte:
+    cmp rcx, 0d 
+    je .notCopyStr 
+
+    .handleByte:
         movsb
-    loop ??handleByte
+    loop .handleByte
+
+    .notCopyStr:
 
     mov byte [rdi], NEW_LINE_SYM
 
@@ -270,6 +286,7 @@ caseFloat:
         ret 
     .notNanCase:
 
+; start main part of a function 
     push rax
     push rbx
     push rcx
@@ -278,8 +295,6 @@ caseFloat:
     push rdi
 
     xor r14, r14
-
-
 
     mov rdi, saveBuffer + MAX_DEC_NUM_LEN - 1d
 
@@ -412,7 +427,7 @@ caseFloat:
     mov rdi, saveBuffer + MAX_DEC_NUM_LEN + 1
     mov rcx, 6d ; 6 - threshold of unary accuracy
     rep movsb 
-
+    
 
     test r13d, 80000000h
     jz .notNegative 
@@ -961,17 +976,17 @@ specifierHandlersJmpTable:
 
 section .data
 
-Msg:    db "testStr %f and %d %s fdsa", 0x0a
+Msg:    db "%d %s  %x %d%%%b%c", 0x0a
 MsgLen    equ $ - Msg
 
-fillStr db "filled", 0x0
+fillStr db "love", 0x0
 
 testFloat dd 07F800f00h
 
 partStrIndexes  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NEW_LINE_SYM
 
-saveBuffer:     db 100 dup(0), NEW_LINE_SYM
-printBuffer:    db 100 dup(0), NEW_LINE_SYM
+saveBuffer:     db 1000 dup(0), NEW_LINE_SYM
+printBuffer:    db 1000 dup(0), NEW_LINE_SYM
 
 printBufferLen equ $ - printBuffer
 
