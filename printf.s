@@ -56,7 +56,7 @@ myPrintfWrap:
     push rsi
     push rdi
     call newPrintf
-    add rsp, 56
+    add rsp, 16
 
     pop rbp
     ret 
@@ -120,12 +120,7 @@ countSpecifiers:
             inc rdi
             mov rsi, partStrIndexes
 
-            cmp r9, rbx 
-            je .notSaveStart 
-
             call saveStartStrPart
-
-            .notSaveStart:
 
             ;skip specifier part
             add rcx, 2
