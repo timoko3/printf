@@ -56,7 +56,7 @@ myPrintfWrap:
     push rsi
     push rdi
     call newPrintf
-    add rsp, 16
+    add rsp, 56
 
     pop rbp
     ret 
@@ -110,7 +110,7 @@ countSpecifiers:
     xor rdi, rdi
     xor rcx, rcx 
     
-    mov r9, rbx
+    ; inc rdx
 
     ??startCycle:
     cmp rcx, rbx
@@ -120,11 +120,21 @@ countSpecifiers:
             inc rdi
             mov rsi, partStrIndexes
 
+            cmp rdi, 1d
+            je .notSave
+
             call saveStartStrPart
 
-            ;skip specifier part
+            .notSave:
+
             add rcx, 2
+
+            cmp byte [rax + rcx], SPECIFIER_SYMBOL
+            je .nextSpecifier
+
             call saveStartStrPart
+
+            .nextSpecifier:
 
             jmp ??startCycle
         ??notSpecifier:
