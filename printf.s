@@ -4,6 +4,8 @@ global _start
 
 global myPrintfWrap
 
+extern printf 
+
 SPECIFIER_SYMBOL          equ '%'
 
 DIFFERENCE_NUM_ASCII_L9   equ 48d
@@ -43,20 +45,35 @@ myPrintfWrap:
     push rbp 
     mov rbp, rsp 
 
+    ; sub rsp, 8
+    ; movss xmm0, [rbp + 24]
+    ; movss [rsp], xmm0
+
     push qword [rbp + 16]
     push r9
     push r8
     push rcx
     push rdx
 
-    ; sub rsp, 8
-    ; movss xmm0, [testFloat]
-    ; movss [rsp], xmm0
-
     push rsi
     push rdi
     call newPrintf
     add rsp, 56
+
+    ; call of std printf
+    
+    push 33
+    mov r9, 31
+    mov r8, 100 
+    mov rcx, 3802
+    mov rdx, fillStr
+    mov rsi, -1
+    mov rdi, Msg
+    mov al, 0
+    call printf
+    add rsp, 8
+
+    mov rax, 0
 
     pop rbp
     ret 
@@ -1033,8 +1050,8 @@ specifierHandlersJmpTable:
 
 section .data
 
-; Msg:    db "%d %s  %x %d%%%b%c", 0x0a
-; MsgLen    equ $ - Msg
+Msg:    db "%d %s  %x %d%%%b%c", 0x0a, 0x0
+MsgLen    equ $ - Msg
 
 fillStr db "love", 0x0
 
