@@ -1,4 +1,4 @@
-default rel
+; default rel
 section .text
 
 global _start
@@ -46,24 +46,86 @@ myPrintfWrap:
     push rbp 
     mov rbp, rsp 
 
+    mov r14, rdx 
+    mov r13, rdi
+
+    mov rax, rdi
+
+    xor rdi, rdi        
+    call countSpecifiers
+    mov r12, rdi
+
+    mov rdi, r13
+    mov rdx, r14
+
+
+
+    mov rax, r12
+    imul rax, 8
+    sub rsp, rax 
+
+    xor r13, r13   ; index = 0
+
+    cmp r13, r12
+    jge .done
+    mov [rsp + r13*8], rsi
+    inc r13
+
+    cmp r13, r12
+    jge .done
+    mov [rsp + r13*8], rdx
+    inc r13
+
+    cmp r13, r12
+    jge .done
+    mov [rsp + r13*8], rcx
+    inc r13
+
+    cmp r13, r12
+    jge .done
+    mov [rsp + r13*8], r8
+    inc r13
+
+    cmp r13, r12
+    jge .done
+    mov [rsp + r13*8], r9
+    inc r13
+
+    mov r14, 0   ; stack index
+
+    .stack_loop:
+    cmp r13, r12
+    jge .done
+
+    mov rax, [rbp + 16 + r14*8]
+    mov [rsp + r13*8], rax
+
+    inc r13
+    inc r14
+    jmp .stack_loop
+
+    .done:
+
     ; sub rsp, 8
     ; movss xmm0, [rbp + 24]
     ; movss [rsp], xmm0
 
-    push qword [rbp + 48]
-    push qword [rbp + 40]
-    push qword [rbp + 32]
-    push qword [rbp + 24]
-    push qword [rbp + 16]
-    push r9
-    push r8
-    push rcx
-    push rdx
+    ; push qword [rbp + 48]
+    ; push qword [rbp + 40]
+    ; push qword [rbp + 32]
+    ; push qword [rbp + 24]
+    ; push qword [rbp + 16]
+    ; push r9
+    ; push r8
+    ; push rcx
+    ; push rdx
 
-    push rsi
-    push rdi
+    ; push rsi
+    ; push r13
     call newPrintf
-    add rsp, 88
+    mov  rax, r12
+    imul rax, 8
+    add  rsp, rax
 
     ; call of std printf
     
@@ -98,6 +160,11 @@ newPrintf:
 
     mov rsi, [rbp + 16]
     call strlen
+
+    ; empty str case
+    cmp rcx, 0d
+    jmp .emptyStr
+
     mov rbx, rcx
     mov rax, [rbp + 16]
     call countSpecifiers 
@@ -108,6 +175,8 @@ newPrintf:
     mov rax, [rbp + 16]
     
     call handleStrParts
+
+    .emptyStr:
 
     mov rax, 0x01
     mov rdi, 1d
@@ -128,6 +197,11 @@ newPrintf:
 ; Destr: rax, rbx, rcx, rdx, rsi, rdi, r8b 
 ;-----------------------------------------------------------------------
 countSpecifiers:
+    push rsi
+    push rcx
+    push r8
+    push r9
+
     xor rdx, rdx
     xor rdi, rdi
     xor rcx, rcx 
@@ -170,6 +244,12 @@ countSpecifiers:
         inc rcx 
     jmp ??startCycle
     ??endCycle:
+
+    pop r9
+    pop r8
+    pop rcx
+    pop rsi 
+
     ret 
 
 ;-----------------------------------------------------------------------
