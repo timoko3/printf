@@ -1,3 +1,4 @@
+default rel
 section .text
 
 global _start
@@ -49,6 +50,10 @@ myPrintfWrap:
     ; movss xmm0, [rbp + 24]
     ; movss [rsp], xmm0
 
+    push qword [rbp + 48]
+    push qword [rbp + 40]
+    push qword [rbp + 32]
+    push qword [rbp + 24]
     push qword [rbp + 16]
     push r9
     push r8
@@ -58,7 +63,7 @@ myPrintfWrap:
     push rsi
     push rdi
     call newPrintf
-    add rsp, 56
+    add rsp, 88
 
     ; call of std printf
     
@@ -66,11 +71,11 @@ myPrintfWrap:
     mov r9, 31
     mov r8, 100 
     mov rcx, 3802
-    mov rdx, fillStr
+    lea rdx, [fillStr]
     mov rsi, -1
-    mov rdi, Msg
+    lea rdi, [Msg]
     mov al, 0
-    call printf
+    call printf wrt ..plt
     add rsp, 8
 
     mov rax, 0
@@ -106,7 +111,7 @@ newPrintf:
 
     mov rax, 0x01
     mov rdi, 1d
-    mov rsi, printBuffer
+    lea rsi, [printBuffer]
     mov rdx, printBufferLen
     syscall
 
@@ -135,7 +140,7 @@ countSpecifiers:
         cmp byte [rax + rcx], SPECIFIER_SYMBOL
         jne ??notSpecifier
             inc rdi
-            mov rsi, partStrIndexes
+            lea rsi, [partStrIndexes]
 
             cmp rdi, 1d
             je .notSave
@@ -157,7 +162,7 @@ countSpecifiers:
         ??notSpecifier:
         cmp byte [rax + rcx], NEW_LINE_SYM
         jne ??notEndStr
-            mov rsi, partStrIndexes
+            lea rsi, [partStrIndexes]
             
             call saveStartStrPart
 
@@ -215,7 +220,10 @@ handleStrParts:
     ??handleStr:
         mov r11, rdx 
         sub r11, rcx
-        mov al, byte [partStrIndexes + r11]
+
+        lea rbx, [partStrIndexes]
+
+        mov al, byte [rbx + r11]
         cmp byte [rsi + rax], SPECIFIER_SYMBOL
         je ??specifierCase
             push rcx 
@@ -223,11 +231,12 @@ handleStrParts:
             push rdi
 
             ; put in cl length current part str
-            mov cl, byte [partStrIndexes + r11 + 1d]
-            sub cl, byte [partStrIndexes + r11]
+            
+            mov cl, byte [rbx + r11 + 1d]
+            sub cl, byte [rbx + r11]
 
             ; count current printBuffer position
-            mov rdi, printBuffer
+            lea rdi, [printBuffer]
             add rdi, r8
 
             ; count current str position            
@@ -254,13 +263,13 @@ handleStrParts:
             mov r13, [rbp + 16 + 8 * r10]
 
             ; count current str position            
-            mov rsi, saveBuffer
+            lea rsi, [saveBuffer]
 
             call handleSpecifier
             inc r10
 
             ; count current printBuffer position
-            mov rdi, printBuffer
+            lea rdi, [printBuffer]
             add rdi, r8
 
             mov rcx, r14
@@ -309,7 +318,8 @@ handleStrPart:
 ; Destr: r9b
 ;-----------------------------------------------------------------------
 handleSpecifier:
-    jmp [specifierHandlersJmpTable + r9 * 8]
+    lea r15, [specifierHandlersJmpTable]
+    jmp [r15 + r9 * 8]
 
     ret 
 
@@ -317,9 +327,10 @@ caseFloat:
     ; is INF test 
     cmp r13, 7f800000h
     jne .notInfCase
-        mov byte [saveBuffer], 'I'
-        mov byte [saveBuffer + 1], 'N'
-        mov byte [saveBuffer + 2], 'F'
+        lea r15, [saveBuffer]
+        mov byte [r15], 'I'
+        mov byte [r15 + 1], 'N'
+        mov byte [r15 + 2], 'F'
 
         mov r14, 3d 
         ret 
@@ -328,9 +339,10 @@ caseFloat:
     ; is NAN test
     test r13, 7f800000h
     jz .notNanCase
-        mov byte [saveBuffer], 'N'
-        mov byte [saveBuffer + 1], 'A'
-        mov byte [saveBuffer + 2], 'N'
+        lea r15, [saveBuffer]
+        mov byte [r15], 'N'
+        mov byte [r15 + 1], 'A'
+        mov byte [r15 + 2], 'N'
 
         mov r14, 3d 
         ret 
@@ -346,7 +358,7 @@ caseFloat:
 
     xor r14, r14
 
-    mov rdi, saveBuffer + MAX_DEC_NUM_LEN - 1d
+    lea rdi, [saveBuffer + MAX_DEC_NUM_LEN - 1d]
 
     mov rcx, MAX_DEC_NUM_LEN    
     .prepareSaveBuffer: 
@@ -412,7 +424,7 @@ caseFloat:
 
 
     ;fix whole part overfilled digits
-    mov rsi, saveBuffer
+    lea rsi, [saveBuffer]
     mov rcx, 19d    
     .fixOverfilledDigits: 
 
@@ -446,8 +458,8 @@ caseFloat:
 
     loop .hexToASCIIMantisPart
 
-    mov rdi, floatBuffer + 22d
-    mov rsi, floatBuffer
+    lea rdi, [floatBuffer + 22d]
+    lea rsi, [floatBuffer]
     mov rcx, 22d    
     .fixOverfilledDigitsMantis: 
 
@@ -460,7 +472,7 @@ caseFloat:
     loop .fixOverfilledDigitsMantis
 
     ; start find first significant digit of whole part in saveBuffer
-    mov rsi, saveBuffer
+    lea rsi, [saveBuffer]
     mov rcx, 19d
     .startFindFirstSignificantDigit:
         cmp byte [rsi], DIFFERENCE_NUM_ASCII_L9
@@ -472,9 +484,10 @@ caseFloat:
     mov r14, rsi
 
     ; copy mantissa part 
-    mov byte [saveBuffer + MAX_DEC_NUM_LEN], '.'
-    mov rsi, floatBuffer
-    mov rdi, saveBuffer + MAX_DEC_NUM_LEN + 1
+    lea r15, [saveBuffer]
+    mov byte [r15 + MAX_DEC_NUM_LEN], '.'
+    lea rsi, [floatBuffer]
+    lea rdi, [r15 + MAX_DEC_NUM_LEN + 1]
     mov rcx, 6d ; 6 - threshold of unary accuracy
     rep movsb 
     
@@ -493,7 +506,7 @@ caseFloat:
     pop rax
 
     mov rsi, r14 
-    mov r14, saveBuffer + MAX_DEC_NUM_LEN + 7d
+    lea r14, [saveBuffer + MAX_DEC_NUM_LEN + 7d]
     sub r14, rsi
 
     ret
@@ -504,7 +517,7 @@ mantisHandle:
     push rdx 
     push r15
 
-    mov rdi, floatBuffer
+    lea rdi, [floatBuffer]
     
 
     sub rcx, r15 
@@ -537,7 +550,7 @@ mantisHandle:
 caseWrong:
     mov rax, 0x01
     mov rdi, 1d
-    mov rsi, wrongSpecifier
+    lea rsi, [wrongSpecifier]
     mov rdx, wrongSpecifierLen
     syscall
 
@@ -551,7 +564,7 @@ casePercent:
     inc r14
     dec r10 
 
-    mov rdi, saveBuffer
+    lea rdi, [saveBuffer]
     mov rax, '%'
     stosb
 
@@ -568,7 +581,7 @@ caseBin:
     xor r14, r14
     mov r15b, 0d  ; flag to start print digits
 
-    mov rdi, saveBuffer
+    lea rdi, [saveBuffer]
     mov rcx, 64d
 
     mov r12, 8000000000000000h ; mask for reg nibble
@@ -617,7 +630,7 @@ caseChar:
     xor r14, r14
     inc r14 
 
-    mov rdi, saveBuffer
+    lea rdi, [saveBuffer]
     mov rax, r13
     stosb
 
@@ -642,7 +655,7 @@ caseDec:
 
     xor r14, r14
 
-    mov rdi, saveBuffer + MAX_DEC_NUM_LEN - 1d
+    lea rdi, [saveBuffer + MAX_DEC_NUM_LEN - 1d]
 
     mov rcx, MAX_DEC_NUM_LEN    
     .prepareSaveBuffer: 
@@ -675,7 +688,7 @@ caseDec:
 
     loop .hexToASCII
 
-    mov rsi, saveBuffer
+    lea rsi, [saveBuffer]
 
     mov rcx, 19d    
     .fixOverfilledDigits: 
@@ -711,7 +724,7 @@ caseDec:
     pop rax
 
     mov rsi, r14 
-    mov r14, saveBuffer + MAX_DEC_NUM_LEN
+    lea r14, [saveBuffer + MAX_DEC_NUM_LEN]
     sub r14, rsi
 
     ret 
@@ -809,7 +822,7 @@ caseOct:
     xor r14, r14
     mov r15b, 0d  ; flag to start print digits
 
-    mov rdi, saveBuffer
+    lea rdi, [saveBuffer]
     mov rcx, 21d
 
     mov r12, 07000000000000000h ; mask for reg nibble
@@ -876,7 +889,7 @@ caseString:
     xor r14, r14
 
     mov rsi, r13
-    mov rdi, saveBuffer
+    lea rdi, [saveBuffer]
     .handleByte:
         cmp byte [rsi], 0h
         je .end 
@@ -908,7 +921,7 @@ caseHex:
     xor r14, r14
     mov r15b, 0d  ; flag to start print digits
 
-    mov rdi, saveBuffer
+    lea rdi, [saveBuffer]
     mov rcx, 16d
 
     mov r12, 0f000000000000000h ; mask for reg nibble
@@ -1001,7 +1014,8 @@ strlen:
 	strlenEnd:
 	ret
 
-section .rodata
+section .data
+
 align 8
 specifierHandlersJmpTable:
     ; 0..36
@@ -1048,8 +1062,6 @@ specifierHandlersJmpTable:
     times (256 - 121) dq caseWrong
 
 
-section .data
-
 Msg:    db "%d %s  %x %d%%%b%c", 0x0a, 0x0
 MsgLen    equ $ - Msg
 
@@ -1068,3 +1080,5 @@ floatBuffer    db 30 dup(30h), NEW_LINE_SYM
 
 wrongSpecifier:    db "ERROR: wrongSpecifier", 0x0a
 wrongSpecifierLen    equ $ - wrongSpecifier
+
+section .note.GNU-stack noalloc noexec nowrite progbits

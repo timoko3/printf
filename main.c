@@ -3,6 +3,6 @@
 extern void myPrintfWrap(const char* format, ...);
 
 int main() {
-    myPrintfWrap("%d %s %x %d%%%b%c meow meow\n", -1, "love", 3802, 100, 31, 33);
+    myPrintfWrap("%d %s %x %d%%%b%c meow meow %o\n", -1, "love", 3802, 100, 31, 33, 72);
     return 0;
 }
