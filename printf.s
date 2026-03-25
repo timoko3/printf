@@ -48,13 +48,21 @@ myPrintfWrap:
 
     mov r14, rdx 
     mov r13, rdi
+    mov r15, rsi
+    mov r11, rcx
 
-    mov rax, rdi
+    mov rsi, rdi
+    call strlen
+
+    mov rax, r13
+    mov rbx, rcx 
 
     xor rdi, rdi        
     call countSpecifiers
     mov r12, rdi
 
+    mov rcx, r11
+    mov rsi, r15
     mov rdi, r13
     mov rdx, r14
 
@@ -67,44 +75,49 @@ myPrintfWrap:
     xor r13, r13   ; index = 0
 
     cmp r13, r12
-    jge .done
+    jge .argFillDone
+    mov [rsp + r13*8], rdi
+    inc r13
+
+    cmp r13, r12
+    jge .argFillDone
     mov [rsp + r13*8], rsi
     inc r13
 
     cmp r13, r12
-    jge .done
+    jge .argFillDone
     mov [rsp + r13*8], rdx
     inc r13
 
     cmp r13, r12
-    jge .done
+    jge .argFillDone
     mov [rsp + r13*8], rcx
     inc r13
 
     cmp r13, r12
-    jge .done
+    jge .argFillDone
     mov [rsp + r13*8], r8
     inc r13
 
     cmp r13, r12
-    jge .done
+    jge .argFillDone
     mov [rsp + r13*8], r9
     inc r13
 
     mov r14, 0   ; stack index
 
-    .stack_loop:
+    .stackFillLoop:
     cmp r13, r12
-    jge .done
+    jge .argFillDone
 
     mov rax, [rbp + 16 + r14*8]
     mov [rsp + r13*8], rax
 
     inc r13
     inc r14
-    jmp .stack_loop
+    jmp .stackFillLoop
 
-    .done:
+    .argFillDone:
 
     ; sub rsp, 8
     ; movss xmm0, [rbp + 24]
@@ -158,12 +171,14 @@ newPrintf:
     push rbp 
     mov rbp, rsp 
 
+    push r12
+
     mov rsi, [rbp + 16]
     call strlen
 
     ; empty str case
     cmp rcx, 0d
-    jmp .emptyStr
+    je .emptyStr
 
     mov rbx, rcx
     mov rax, [rbp + 16]
@@ -184,6 +199,8 @@ newPrintf:
     mov rdx, printBufferLen
     syscall
 
+    pop r12
+
     pop rbp
     ret
 
@@ -197,10 +214,6 @@ newPrintf:
 ; Destr: rax, rbx, rcx, rdx, rsi, rdi, r8b 
 ;-----------------------------------------------------------------------
 countSpecifiers:
-    push rsi
-    push rcx
-    push r8
-    push r9
 
     xor rdx, rdx
     xor rdi, rdi
@@ -244,11 +257,6 @@ countSpecifiers:
         inc rcx 
     jmp ??startCycle
     ??endCycle:
-
-    pop r9
-    pop r8
-    pop rcx
-    pop rsi 
 
     ret 
 
