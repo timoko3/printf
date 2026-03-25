@@ -9,6 +9,8 @@ extern printf
 
 SPECIFIER_SYMBOL          equ '%'
 
+BUFFER_SIZE               equ 100d
+
 DIFFERENCE_NUM_ASCII_L9   equ 48d
 DIFFERENCE_NUM_ASCII_G9   equ 55d
 NEW_LINE_SYM              equ 0x0a
@@ -80,11 +82,6 @@ myPrintfWrap:
 
     cmp r13, r12
     jge .argFillDone
-    mov [rsp + r13*8], rdi
-    inc r13
-
-    cmp r13, r12
-    jge .argFillDone
     mov [rsp + r13*8], rsi
     inc r13
 
@@ -123,9 +120,11 @@ myPrintfWrap:
 
     .argFillDone:
 
+    push rdi
     call newPrintf
+    pop rdi
 
-    cmp r12, 6d
+    cmp r12, 5d
     jg .clearOnlyRegArgs
 
         mov  rax, r12
@@ -138,13 +137,14 @@ myPrintfWrap:
         jmp .callStdPrintf
     .clearOnlyRegArgs:
     ; call of std printf
-        sub  r12, 6d 
+        sub  r12, 5d 
 
-        mov  rax, 6d
+        mov  rax, 5d
         imul rax, 8
         add  rsp, rax
     .callStdPrintf:
     
+    mov rax, 0d
     call printf wrt ..plt
 
     mov  rax, r12
@@ -174,12 +174,15 @@ newPrintf:
     push r12
 
     ; to saveArgs for new printf
-    push rdi
     push rsi
     push rdx
     push rcx
     push r8
     push r9
+
+    lea rax, [printBuffer]
+    mov rbx, BUFFER_SIZE
+    call clearBuffer
 
     mov rsi, [rbp + 16]
     call strlen
@@ -206,7 +209,6 @@ newPrintf:
     pop rcx
     pop rdx
     pop rsi
-    pop rdi
 
     pop r12
 
@@ -1113,6 +1115,20 @@ strlen:
 	strlenEnd:
 	ret
 
+;-----------------------------------------------------------------------
+; fills buffer with 0 values
+; Entry: rax = pointer to the begin of buffer
+; Exit:  rbx = length buffer
+; Exp:   dh = ensStr symbol ASCII code
+; Destr: ah, cx, di
+;-----------------------------------------------------------------------
+clearBuffer:
+    mov rcx, rbx 
+    .clear:
+        mov byte [rax + rcx], 0d
+    loop .clear 
+    ret    
+
 section .data
 
 align 8
@@ -1170,8 +1186,8 @@ testFloat dd 07F800f00h
 
 partStrIndexes  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NEW_LINE_SYM
 
-saveBuffer:     db 1000 dup(0), NEW_LINE_SYM
-printBuffer:    db 1000 dup(0), NEW_LINE_SYM
+saveBuffer:     db BUFFER_SIZE dup(0), NEW_LINE_SYM
+printBuffer:    db BUFFER_SIZE dup(0), NEW_LINE_SYM
 
 printBufferLen equ $ - printBuffer
 
