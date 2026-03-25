@@ -198,10 +198,13 @@ newPrintf:
     
     call handleStrParts
 
+    lea rsi, [printBuffer]
+    call strlen
+
     mov rax, 0x01
     mov rdi, 1d
     lea rsi, [printBuffer]
-    mov rdx, printBufferLen
+    mov rdx, rcx
     syscall
 
     pop r9
@@ -717,7 +720,12 @@ caseBin:
         .notSignNum:
     loop .hexToASCII
 
-    mov byte [rdi], NEW_LINE_SYM
+    test r14, r14
+    jnz .notInc
+        mov rax, DIFFERENCE_NUM_ASCII_L9 
+        stosb
+        inc r14
+    .notInc:
 
     pop rdi
     pop rsi
@@ -767,8 +775,8 @@ caseDec:
         not rcx
     loop .prepareSaveBuffer
 
-    mov rcx, 31d
-    mov r12, 40000000h
+    mov rcx, 32d
+    mov r12, 80000000h
 
     xor r15b, r15b
 
@@ -976,7 +984,12 @@ caseOct:
         .notSignNum:
     loop .hexToASCII
 
-    mov byte [rdi], NEW_LINE_SYM
+    test r14, r14
+    jnz .notInc
+        mov rax, DIFFERENCE_NUM_ASCII_L9 
+        stosb
+        inc r14
+    .notInc:
 
     pop rdi
     pop rsi
@@ -1058,7 +1071,12 @@ caseHex:
         .notSignNum:
     loop .hexToASCII
 
-    mov byte [rdi], NEW_LINE_SYM
+    test r14, r14
+    jnz .notInc
+        mov rax, DIFFERENCE_NUM_ASCII_L9 
+        stosb
+        inc r14
+    .notInc:
 
     pop rdi
     pop rsi
