@@ -114,52 +114,46 @@ myPrintfWrap:
     cmp r13, r12
     jge .argFillDone
 
-    mov rax, [rbp + 16 + r14*8]
-    mov [rsp + r13*8], rax
+        mov rax, [rbp + 16 + r14*8]
+        mov [rsp + r13*8], rax
 
-    inc r13
-    inc r14
+        inc r13
+        inc r14
     jmp .stackFillLoop
 
     .argFillDone:
 
-    ; sub rsp, 8
-    ; movss xmm0, [rbp + 24]
-    ; movss [rsp], xmm0
-
-    ; push qword [rbp + 48]
-    ; push qword [rbp + 40]
-    ; push qword [rbp + 32]
-    ; push qword [rbp + 24]
-    ; push qword [rbp + 16]
-    ; push r9
-    ; push r8
-    ; push rcx
-    ; push rdx
-
-    ; push rsi
-    ; push rdi
     call newPrintf
+
+    cmp r12, 6d
+    jg .clearOnlyRegArgs
+
+        mov  rax, r12
+        imul rax, 8
+        add  rsp, rax
+        
+        xor r12, r12
+
+
+        jmp .callStdPrintf
+    .clearOnlyRegArgs:
+    ; call of std printf
+        sub  r12, 6d 
+
+        mov  rax, 6d
+        imul rax, 8
+        add  rsp, rax
+    .callStdPrintf:
+    
+    call printf wrt ..plt
+
     mov  rax, r12
     imul rax, 8
     add  rsp, rax
 
+
+
     .emptyStr:
-
-    ; call of std printf
-    
-    push 33
-    mov r9, 31
-    mov r8, 100 
-    mov rcx, 3802
-    lea rdx, [fillStr]
-    mov rsi, -1
-    lea rdi, [Msg]
-    mov al, 0
-    call printf wrt ..plt
-    add rsp, 8
-
-    mov rax, 0
 
     pop rbp
     ret 
@@ -178,6 +172,14 @@ newPrintf:
     mov rbp, rsp 
 
     push r12
+
+    ; to saveArgs for new printf
+    push rdi
+    push rsi
+    push rdx
+    push rcx
+    push r8
+    push r9
 
     mov rsi, [rbp + 16]
     call strlen
@@ -198,6 +200,13 @@ newPrintf:
     lea rsi, [printBuffer]
     mov rdx, printBufferLen
     syscall
+
+    pop r9
+    pop r8
+    pop rcx
+    pop rdx
+    pop rsi
+    pop rdi
 
     pop r12
 
