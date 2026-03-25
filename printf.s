@@ -1153,21 +1153,21 @@ section .data
 align 8
 specifierHandlersJmpTable:
     
-    times '%'             dq caseWrong   ; 0..36
+    times ('%'  -  0)     dq caseWrong  
                           dq casePercent ; '%'
-    times ('b' - '%' + 1) dq caseWrong
+    times ('b' - '%' - 1) dq caseWrong
                           dq caseBin     ; 'b'
                           dq caseChar    ; 'c'
                           dq caseDec     ; 'd'
                           dq caseWrong
-                          dq caseFloat
-    times (111 - 103)     dq caseWrong   ; 101..110
-                          dq caseOct     ; 111 = 'o'
-    times (115 - 112)     dq caseWrong   ; 112..114
-                          dq caseString  ; 115 = 's'
-    times (120 - 116)     dq caseWrong   ; 116..119
-                          dq caseHex     ; 120 = 'x'
-    times (256 - 121)     dq caseWrong   ; till 256
+                          dq caseFloat   ; 'f'
+    times ('o' - 'f' - 1) dq caseWrong 
+                          dq caseOct     ; 'o'
+    times ('s' - 'o' - 1) dq caseWrong   
+                          dq caseString  ; 's'
+    times ('x' - 's' - 1) dq caseWrong 
+                          dq caseHex     ; 'x'
+    times (256 - 'x' - 1) dq caseWrong   
 
 ; Msg:    db "%d %s  %x %d%%%b%c", 0x0a, 0x0
 ; MsgLen    equ $ - Msg
