@@ -4,7 +4,8 @@
 extern void myPrintfWrap(const char* format, ...);
 
 int main() {
-    myPrintfWrap("%d %s %x %d %%%b%c meow meow %o\n", -1, "love", 3802, 100, 31, 33, 72);
+    // goto start;
+    myPrintfWrap("");
     
     myPrintfWrap("Hello world\n");
     myPrintfWrap("%d\n", 42);
@@ -33,7 +34,8 @@ int main() {
     myPrintfWrap("%b\n", 0);
 
     myPrintfWrap("%d %d %d %d %d %d\n", 1, 2, 3, 4, 5, 6);
-    myPrintfWrap("%d %d %d %d %d %d %d %d\n", 1,2,3,4,5,6,7,8);
+    start:
+    myPrintfWrap("%d%d%d%d%d %d %d %d %d %d %d %d %s %x %d%%%c%b meow meow %o\n", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, -1, "love", 3802, 100, 33, 126, 72);
 
     myPrintfWrap("%%%%%%\n");      
     myPrintfWrap("%d%d%d\n", 1,2,3);   

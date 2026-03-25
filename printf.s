@@ -1,4 +1,4 @@
-; default rel
+default rel
 section .text
 
 global _start
@@ -19,7 +19,7 @@ END_STR_SYM               equ 0x0
 MAX_DEC_NUM_LEN           equ 20d
 
 FLOAT_BIAS                equ 127d
-FLOAT_AFTER_DOT_LEN       equ 6d
+FLOAT_AFTER_DOT_LEN	  equ 6d
 
 ; _start:
 ;     push 0123
@@ -1098,6 +1098,7 @@ convertNibbleToASCII:
     cmp rax, 9d
     jg ??G9
         add rax, DIFFERENCE_NUM_ASCII_L9
+        
         jmp ??end
 
     ??G9:
@@ -1105,7 +1106,7 @@ convertNibbleToASCII:
     ; case > 9
     
     add rax, DIFFERENCE_NUM_ASCII_G9
-
+    or rax, 20h
     ??end:
     ret 
 
@@ -1151,67 +1152,40 @@ section .data
 
 align 8
 specifierHandlersJmpTable:
-    ; 0..36
-    times 37 dq caseWrong
+    
+    times '%'             dq caseWrong   ; 0..36
+                          dq casePercent ; '%'
+    times ('b' - '%' + 1) dq caseWrong
+                          dq caseBin     ; 'b'
+                          dq caseChar    ; 'c'
+                          dq caseDec     ; 'd'
+                          dq caseWrong
+                          dq caseFloat
+    times (111 - 103)     dq caseWrong   ; 101..110
+                          dq caseOct     ; 111 = 'o'
+    times (115 - 112)     dq caseWrong   ; 112..114
+                          dq caseString  ; 115 = 's'
+    times (120 - 116)     dq caseWrong   ; 116..119
+                          dq caseHex     ; 120 = 'x'
+    times (256 - 121)     dq caseWrong   ; till 256
 
-    ; 37 = '%'
-    dq casePercent
+; Msg:    db "%d %s  %x %d%%%b%c", 0x0a, 0x0
+; MsgLen    equ $ - Msg
 
-    ; 38..97
-    times (98 - 38) dq caseWrong
+; fillStr db "love", 0x0
 
-    ; 98 = 'b'
-    dq caseBin
+testFloat          dd 07F800f00h
 
-    ; 99 = 'c'
-    dq caseChar
+partStrIndexes     db BUFFER_SIZE dup(0), NEW_LINE_SYM
 
-    ; 100 = 'd'
-    dq caseDec
+saveBuffer:        db BUFFER_SIZE dup(0), NEW_LINE_SYM
+printBuffer:       db BUFFER_SIZE dup(0), NEW_LINE_SYM
 
-    dq caseWrong
+printBufferLen     equ $ - printBuffer
 
-    dq caseFloat
-
-    ; 101..110
-    times (111 - 103) dq caseWrong
-
-    ; 111 = 'o'
-    dq caseOct
-
-    ; 112..114
-    times (115 - 112) dq caseWrong
-
-    ; 115 = 's'
-    dq caseString
-
-    ; 116..119
-    times (120 - 116) dq caseWrong
-
-    ; 120 = 'x'
-    dq caseHex
-
-    ; till 256
-    times (256 - 121) dq caseWrong
-
-
-Msg:    db "%d %s  %x %d%%%b%c", 0x0a, 0x0
-MsgLen    equ $ - Msg
-
-fillStr db "love", 0x0
-
-testFloat dd 07F800f00h
-
-partStrIndexes  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NEW_LINE_SYM
-
-saveBuffer:     db BUFFER_SIZE dup(0), NEW_LINE_SYM
-printBuffer:    db BUFFER_SIZE dup(0), NEW_LINE_SYM
-
-printBufferLen equ $ - printBuffer
-
-floatBuffer    db 30 dup(30h), NEW_LINE_SYM
+floatBuffer        db 30 dup(30h), NEW_LINE_SYM
 
 wrongSpecifier:    db "ERROR: wrongSpecifier", 0x0a
-wrongSpecifierLen    equ $ - wrongSpecifier
+wrongSpecifierLen  equ $ - wrongSpecifier
 
 section .note.GNU-stack noalloc noexec nowrite progbits
