@@ -54,6 +54,10 @@ myPrintfWrap:
     mov rsi, rdi
     call strlen
 
+    ; empty str case
+    cmp rcx, 0d
+    je .emptyStr
+
     mov rax, r13
     mov rbx, rcx 
 
@@ -134,11 +138,13 @@ myPrintfWrap:
     ; push rdx
 
     ; push rsi
-    ; push r13
+    ; push rdi
     call newPrintf
     mov  rax, r12
     imul rax, 8
     add  rsp, rax
+
+    .emptyStr:
 
     ; call of std printf
     
@@ -176,10 +182,6 @@ newPrintf:
     mov rsi, [rbp + 16]
     call strlen
 
-    ; empty str case
-    cmp rcx, 0d
-    je .emptyStr
-
     mov rbx, rcx
     mov rax, [rbp + 16]
     call countSpecifiers 
@@ -190,8 +192,6 @@ newPrintf:
     mov rax, [rbp + 16]
     
     call handleStrParts
-
-    .emptyStr:
 
     mov rax, 0x01
     mov rdi, 1d
@@ -214,6 +214,7 @@ newPrintf:
 ; Destr: rax, rbx, rcx, rdx, rsi, rdi, r8b 
 ;-----------------------------------------------------------------------
 countSpecifiers:
+    push r8
 
     xor rdx, rdx
     xor rdi, rdi
@@ -258,6 +259,7 @@ countSpecifiers:
     jmp ??startCycle
     ??endCycle:
 
+    pop r8
     ret 
 
 ;-----------------------------------------------------------------------
