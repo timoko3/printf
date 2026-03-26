@@ -173,7 +173,7 @@ myPrintfWrap:
         jmp .nextFloat
 
     .floatFromStack:
-        mov rax, [rsp + 16 + (r15 - 8) * 8]
+        mov rax, [rbp + 16 + (r15 - 8) * 8]
         mov [rsp + r13 * 8], rax
 
     .nextFloat: 
@@ -207,7 +207,7 @@ myPrintfWrap:
         add  rsp, rax
     .callStdPrintf:
     
-    mov rax, 0d
+    mov rax, r15    
     call printf wrt ..plt
 
     mov  rax, r12

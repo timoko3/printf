@@ -5,7 +5,7 @@ extern void myPrintfWrap(const char* format, ...);
 
 int main() {
     // goto start;
-    myPrintfWrap("%f", 3.14);
+    myPrintfWrap("%f\n", 3.14);
     
     // myPrintfWrap("Hello world\n");
     // myPrintfWrap("%d\n", 42);
