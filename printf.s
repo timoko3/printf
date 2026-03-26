@@ -19,7 +19,7 @@ END_STR_SYM               equ 0x0
 MAX_DEC_NUM_LEN           equ 20d
 
 FLOAT_BIAS                equ 127d
-FLOAT_AFTER_DOT_LEN	  equ 6d
+FLOAT_AFTER_DOT_LEN	      equ 6d
 
 ; _start:
 ;     push 0123
