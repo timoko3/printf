@@ -432,7 +432,7 @@ caseFloat:
     cmp r13, 7f800000h
     jne .notInfCase
         lea r15, [saveBuffer]
-        mov byte [r15], 'I'
+        mov byte [r15],     'I'
         mov byte [r15 + 1], 'N'
         mov byte [r15 + 2], 'F'
 
@@ -444,7 +444,7 @@ caseFloat:
     test r13, 7f800000h
     jz .notNanCase
         lea r15, [saveBuffer]
-        mov byte [r15], 'N'
+        mov byte [r15],     'N'
         mov byte [r15 + 1], 'A'
         mov byte [r15 + 2], 'N'
 
