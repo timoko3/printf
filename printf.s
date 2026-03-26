@@ -19,7 +19,7 @@ END_STR_SYM               equ 0x0
 MAX_DEC_NUM_LEN           equ 20d
 
 FLOAT_BIAS                equ 127d
-FLOAT_AFTER_DOT_LEN	  equ 6d
+FLOAT_AFTER_DOT_LEN	      equ 6d
 
 ; _start:
 ;     push 0123
@@ -47,8 +47,6 @@ FLOAT_AFTER_DOT_LEN	  equ 6d
 myPrintfWrap:
     push rbp 
     mov rbp, rsp 
-
-    push rax
 
     mov r14, rdx 
     mov r13, rdi
@@ -78,56 +76,110 @@ myPrintfWrap:
     imul rax, 8
     sub rsp, rax 
 
-    pop rax
-
     xor r13, r13   ; index default args = 0
+    xor r14, r14   ; non float     args = 0
     xor r15, r15   ; index float   args = 0
 
-    lea r11, [floatPosBuffer]
-
-    cmp byte [r11 + r15], r13
-    jne .notFloatArg1
+    .passArgsLoop:
+        cmp r13, r12
+        jge .argFillDone
         
-    .notFloatArg1
+        lea r11, [floatPosBuffer]
 
+        cmp byte [r11 + r13], 1d
+        je  .floatCase
 
-    cmp r13, r12
-    jge .argFillDone
-    mov [rsp + r13*8], rsi
-    inc r13
+    .intCase:
+        cmp r14, 0d 
+        je .useRsi
+        cmp r14, 1d    
+        je .useRdx
+        cmp r14, 2d    
+        je .useRcx
+        cmp r14, 3d    
+        je .useR8
+        cmp r14, 4d    
+        je .useR9
+        jmp .intFromStack
 
-    cmp r13, r12
-    jge .argFillDone
-    mov [rsp + r13*8], rdx
-    inc r13
+    .useRsi:
+        mov rax, rsi
+        jmp .storeInt
+    .useRdx:
+        mov rax, rdx
+        jmp .storeInt
+    .useRcx:
+        mov rax, rcx
+        jmp .storeInt
+    .useR8:
+        mov rax, r8
+        jmp .storeInt
+    .useR9:
+        mov rax, r9
+        jmp .storeInt
 
-    cmp r13, r12
-    jge .argFillDone
-    mov [rsp + r13*8], rcx
-    inc r13
-
-    cmp r13, r12
-    jge .argFillDone
-    mov [rsp + r13*8], r8
-    inc r13
-
-    cmp r13, r12
-    jge .argFillDone
-    mov [rsp + r13*8], r9
-    inc r13
-
-    mov r14, 0   ; stack index
-
-    .stackFillLoop:
-    cmp r13, r12
-    jge .argFillDone
-
-        mov rax, [rbp + 16 + r14*8]
-        mov [rsp + r13*8], rax
-
-        inc r13
+    .intFromStack:
+        mov rax, [rbp + 16 + (r14 - 5) * 8]
+    
+    .storeInt:
+        mov [rsp + r13 * 8], rax
         inc r14
-    jmp .stackFillLoop
+        inc r13 
+        jmp .passArgsLoop
+
+    .floatCase:
+        cmp r15, 0d 
+        je .useXMM0
+        cmp r15, 1d 
+        je .useXMM1
+        cmp r15, 2d 
+        je .useXMM2
+        cmp r15, 3d 
+        je .useXMM3
+        cmp r15, 4d
+        je .useXMM4
+        cmp r15, 5d
+        je .useXMM5
+        cmp r15, 6d
+        je .useXMM6
+        cmp r15, 7d
+        je .useXMM7
+
+        jmp .nextFloat
+        
+    .useXMM0:
+        movsd [rsp + r13 * 8], xmm0
+        jmp .nextFloat
+    .useXMM1:
+        movsd [rsp + r13 * 8], xmm1
+        jmp .nextFloat
+    .useXMM2:
+        movsd [rsp + r13 * 8], xmm2
+        jmp .nextFloat
+    .useXMM3:
+        movsd [rsp + r13 * 8], xmm3
+        jmp .nextFloat
+    .useXMM4:
+        movsd [rsp + r13 * 8], xmm4
+        jmp .nextFloat
+    .useXMM5:
+        movsd [rsp + r13 * 8], xmm5
+        jmp .nextFloat
+    .useXMM6:
+        movsd [rsp + r13 * 8], xmm6
+        jmp .nextFloat
+    .useXMM7:
+        movsd [rsp + r13 * 8], xmm7
+        jmp .nextFloat
+
+    .floatFromStack:
+        mov rax, [rsp + 16 + (r15 - 8) * 8]
+        mov [rsp + r13 * 8], rax
+
+    .nextFloat: 
+        inc r15     
+        inc r13         
+        jmp .passArgsLoop
 
     .argFillDone:
 
@@ -253,12 +305,16 @@ countSpecifiers:
         cmp byte [rax + rcx], SPECIFIER_SYMBOL
         jne ??notSpecifier
             ; saveFloatArgNum
-            cmp [rax + rcx + 1], 'f'
+            cmp byte [rax + rcx + 1], 'f'
             jne .notFloat
                 lea r8, [floatPosBuffer]
-                mov byte [r8 + rdi], rdi
-
-            .notFloat
+                mov byte [r8 + rdi], 1d
+                jmp .float
+            .notFloat:
+                lea r8, [floatPosBuffer]
+                mov byte [r8 + rdi], 0d
+            .float: 
+            
 
             inc rdi
             lea rsi, [partStrIndexes]
@@ -451,7 +507,7 @@ caseFloat:
     cmp r13, 7f800000h
     jne .notInfCase
         lea r15, [saveBuffer]
-        mov byte [r15], 'I'
+        mov byte [r15],     'I'
         mov byte [r15 + 1], 'N'
         mov byte [r15 + 2], 'F'
 
@@ -463,7 +519,7 @@ caseFloat:
     test r13, 7f800000h
     jz .notNanCase
         lea r15, [saveBuffer]
-        mov byte [r15], 'N'
+        mov byte [r15],     'N'
         mov byte [r15 + 1], 'A'
         mov byte [r15 + 2], 'N'
 
