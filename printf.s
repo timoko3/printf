@@ -48,6 +48,8 @@ myPrintfWrap:
     push rbp 
     mov rbp, rsp 
 
+    push rax
+
     mov r14, rdx 
     mov r13, rdi
     mov r15, rsi
@@ -72,13 +74,22 @@ myPrintfWrap:
     mov rdi, r13
     mov rdx, r14
 
-
-
     mov rax, r12
     imul rax, 8
     sub rsp, rax 
 
-    xor r13, r13   ; index = 0
+    pop rax
+
+    xor r13, r13   ; index default args = 0
+    xor r15, r15   ; index float   args = 0
+
+    lea r11, [floatPosBuffer]
+
+    cmp byte [r11 + r15], r13
+    jne .notFloatArg1
+        
+    .notFloatArg1
+
 
     cmp r13, r12
     jge .argFillDone
@@ -225,7 +236,7 @@ newPrintf:
 ; Exit:  rdx = amount str parts
 ;        rdi = amount specifiers
 ; Exp:   nop
-; Destr: rax, rbx, rcx, rdx, rsi, rdi, r8b 
+; Destr: rax, rbx, rcx, rdx, rsi, rdi, r8
 ;-----------------------------------------------------------------------
 countSpecifiers:
     push r8
@@ -241,6 +252,14 @@ countSpecifiers:
     jge ??endCycle
         cmp byte [rax + rcx], SPECIFIER_SYMBOL
         jne ??notSpecifier
+            ; saveFloatArgNum
+            cmp [rax + rcx + 1], 'f'
+            jne .notFloat
+                lea r8, [floatPosBuffer]
+                mov byte [r8 + rdi], rdi
+
+            .notFloat
+
             inc rdi
             lea rsi, [partStrIndexes]
 
@@ -1183,6 +1202,7 @@ printBuffer:       db BUFFER_SIZE dup(0), NEW_LINE_SYM
 
 printBufferLen     equ $ - printBuffer
 
+floatPosBuffer     db 30 dup(0),   NEW_LINE_SYM
 floatBuffer        db 30 dup(30h), NEW_LINE_SYM
 
 wrongSpecifier:    db "ERROR: wrongSpecifier", 0x0a
