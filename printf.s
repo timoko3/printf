@@ -148,32 +148,40 @@ myPrintfWrap:
         jmp .nextFloat
         
     .useXMM0:
+        CVTSD2SS xmm0, xmm0
         movsd [rsp + r13 * 8], xmm0
         jmp .nextFloat
     .useXMM1:
+        CVTSD2SS xmm1, xmm1
         movsd [rsp + r13 * 8], xmm1
         jmp .nextFloat
     .useXMM2:
+        CVTSD2SS xmm2, xmm2
         movsd [rsp + r13 * 8], xmm2
         jmp .nextFloat
     .useXMM3:
+        CVTSD2SS xmm3, xmm3
         movsd [rsp + r13 * 8], xmm3
         jmp .nextFloat
     .useXMM4:
+        CVTSD2SS xmm4, xmm4
         movsd [rsp + r13 * 8], xmm4
         jmp .nextFloat
     .useXMM5:
+        CVTSD2SS xmm5, xmm5
         movsd [rsp + r13 * 8], xmm5
         jmp .nextFloat
     .useXMM6:
+        CVTSD2SS xmm6, xmm6
         movsd [rsp + r13 * 8], xmm6
         jmp .nextFloat
     .useXMM7:
+        CVTSD2SS xmm7, xmm7
         movsd [rsp + r13 * 8], xmm7
         jmp .nextFloat
 
     .floatFromStack:
-        mov rax, [rbp + 16 + (r15 - 8) * 8]
+        mov rax, [rsp + 16 + (r15 - 8) * 8]
         mov [rsp + r13 * 8], rax
 
     .nextFloat: 
@@ -207,7 +215,7 @@ myPrintfWrap:
         add  rsp, rax
     .callStdPrintf:
     
-    mov rax, r15    
+    mov rax, r15
     call printf wrt ..plt
 
     mov  rax, r12
