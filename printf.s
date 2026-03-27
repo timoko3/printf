@@ -48,6 +48,9 @@ myPrintfWrap:
     push rbp 
     mov rbp, rsp 
 
+    lea r11, [xmmAmount]
+    mov byte [r11], al
+
     mov r14, rdx 
     mov r13, rdi
     mov r15, rsi
@@ -205,10 +208,27 @@ myPrintfWrap:
         mov  rax, 5d
         imul rax, 8
         add  rsp, rax
+
     .callStdPrintf:
-    
-    mov rax, r15
+
+    mov rax, rsp
+    and rax, 15
+    jz .aligned
+        sub rsp, 8
+        mov rbx, 1 
+    .aligned:
+    mov al, [xmmAmount]
     call printf wrt ..plt
+
+    cmp rbx, 1d
+    je .restoreStack
+
+    jmp .doneCallStdPrintf
+
+    .restoreStack:
+        add rsp, 8
+
+    .doneCallStdPrintf:
 
     mov  rax, r12
     imul rax, 8
@@ -585,6 +605,8 @@ caseFloat:
 
     mov rdx, rax
     sub rdx, 1023
+
+    ; denormalized case
     
     ; normalized case
 
@@ -1289,6 +1311,8 @@ printBufferLen     equ $ - printBuffer
 
 floatPosBuffer     db 30 dup(0),   NEW_LINE_SYM
 floatBuffer        db 30 dup(30h), NEW_LINE_SYM
+
+xmmAmount          db 0
 
 wrongSpecifier:    db "ERROR: wrongSpecifier", 0x0a
 wrongSpecifierLen  equ $ - wrongSpecifier
