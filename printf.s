@@ -551,7 +551,7 @@ caseFloat:
     ; иначе NaN
     ; === NaN case ===
     lea r15, [saveBuffer]
-    mov byte [r15], 'N'
+    mov byte [r15],   'N'
     mov byte [r15+1], 'A'
     mov byte [r15+2], 'N'
     mov r14, 3
@@ -566,10 +566,17 @@ caseFloat:
 
     .isInf:
     lea r15, [saveBuffer]
-    mov byte [r15], 'I'
-    mov byte [r15+1], 'N'
-    mov byte [r15+2], 'F'
+    mov byte [r15 + 1], 'I'
+    mov byte [r15 + 2], 'N'
+    mov byte [r15 + 3], 'F'
     mov r14, 3
+
+    mov r12, 0x8000000000000000
+    test r13, r12
+    jz .notNegativeInf
+        inc r14 
+        mov byte [r15], '-'
+    .notNegativeInf:
 
     pop rdi 
     pop rsi 
