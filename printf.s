@@ -10,6 +10,7 @@ extern printf
 SPECIFIER_SYMBOL          equ '%'
 
 BUFFER_SIZE               equ 100d
+FLOAT_BUFFER_SIZE         equ 30d
 
 DIFFERENCE_NUM_ASCII_L9   equ 48d
 DIFFERENCE_NUM_ASCII_G9   equ 55d
@@ -579,16 +580,18 @@ caseFloat:
     ret
 
     .notSpecial:
-
+        
     xor r14, r14
 
-    lea rdi, [saveBuffer + MAX_DEC_NUM_LEN - 1d]
+    lea rdi, [saveBuffer  + MAX_DEC_NUM_LEN - 1d]
+    lea rsi, [floatBuffer + MAX_DEC_NUM_LEN - 1d]
 
     mov rcx, MAX_DEC_NUM_LEN    
     .prepareSaveBuffer: 
         not rcx
         add rcx, 1d
         mov byte [rdi + rcx + 1], DIFFERENCE_NUM_ASCII_L9
+        mov byte [rsi + rcx + 1], DIFFERENCE_NUM_ASCII_L9
         sub rcx, 1d
         not rcx
     loop .prepareSaveBuffer
@@ -671,7 +674,7 @@ caseFloat:
     mov rcx, rdx 
     shr r12, cl
 
-    mov rcx, 23d 
+    mov rcx, 52d 
     sub rcx, rdx
 
 
@@ -748,7 +751,6 @@ mantisHandle:
     push r15
 
     lea rdi, [floatBuffer]
-    
 
     sub rcx, r15 
     not rcx
@@ -1263,7 +1265,9 @@ strlen:
 ;-----------------------------------------------------------------------
 ; fills buffer with 0 values
 ; Entry: rax = pointer to the begin of buffer
-; Exit:  rbx = length buffer
+;        rbx = length buffer
+;        cl  = symbol to clear with
+; Exit:  
 ; Exp:   dh = ensStr symbol ASCII code
 ; Destr: ah, cx, di
 ;-----------------------------------------------------------------------
@@ -1309,8 +1313,8 @@ printBuffer:       db BUFFER_SIZE dup(0), NEW_LINE_SYM
 
 printBufferLen     equ $ - printBuffer
 
-floatPosBuffer     db 30 dup(0),   NEW_LINE_SYM
-floatBuffer        db 30 dup(30h), NEW_LINE_SYM
+floatPosBuffer     db FLOAT_BUFFER_SIZE dup(0),   NEW_LINE_SYM
+floatBuffer        db FLOAT_BUFFER_SIZE dup(30h), NEW_LINE_SYM
 
 xmmAmount          db 0
 

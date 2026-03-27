@@ -9,6 +9,7 @@ int main() {
 
     myPrintfWrap("%f\n", 3.14);
     myPrintfWrap("%f\n", -3.14);
+    myPrintfWrap("%f\n", 3.14);
     
     // myPrintfWrap("Hello world\n");
     // myPrintfWrap("%d\n", 42);
