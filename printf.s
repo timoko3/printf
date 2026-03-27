@@ -148,35 +148,27 @@ myPrintfWrap:
         jmp .nextFloat
         
     .useXMM0:
-        CVTSD2SS xmm0, xmm0
         movsd [rsp + r13 * 8], xmm0
         jmp .nextFloat
     .useXMM1:
-        CVTSD2SS xmm1, xmm1
         movsd [rsp + r13 * 8], xmm1
         jmp .nextFloat
     .useXMM2:
-        CVTSD2SS xmm2, xmm2
         movsd [rsp + r13 * 8], xmm2
         jmp .nextFloat
     .useXMM3:
-        CVTSD2SS xmm3, xmm3
         movsd [rsp + r13 * 8], xmm3
         jmp .nextFloat
     .useXMM4:
-        CVTSD2SS xmm4, xmm4
         movsd [rsp + r13 * 8], xmm4
         jmp .nextFloat
     .useXMM5:
-        CVTSD2SS xmm5, xmm5
         movsd [rsp + r13 * 8], xmm5
         jmp .nextFloat
     .useXMM6:
-        CVTSD2SS xmm6, xmm6
         movsd [rsp + r13 * 8], xmm6
         jmp .nextFloat
     .useXMM7:
-        CVTSD2SS xmm7, xmm7
         movsd [rsp + r13 * 8], xmm7
         jmp .nextFloat
 
@@ -511,30 +503,6 @@ handleSpecifier:
     ret 
 
 caseFloat:
-    ; is INF test 
-    cmp r13, 7f800000h
-    jne .notInfCase
-        lea r15, [saveBuffer]
-        mov byte [r15],     'I'
-        mov byte [r15 + 1], 'N'
-        mov byte [r15 + 2], 'F'
-
-        mov r14, 3d 
-        ret 
-    .notInfCase:
-
-    ; is NAN test
-    test r13, 7f800000h
-    jz .notNanCase
-        lea r15, [saveBuffer]
-        mov byte [r15],     'N'
-        mov byte [r15 + 1], 'A'
-        mov byte [r15 + 2], 'N'
-
-        mov r14, 3d 
-        ret 
-    .notNanCase:
-
 ; start main part of a function 
     push rax
     push rbx
@@ -542,6 +510,55 @@ caseFloat:
     push rdx 
     push rsi
     push rdi
+
+    mov r12, 0x7ff0000000000000
+    mov rax, r13
+    and rax, r12
+
+    cmp rax, r12
+    jne .notSpecial
+
+    ; тут exp == all 1
+
+    mov r12, 0x000fffffffffffff
+    mov rax, r13
+    and rax, r12
+
+    test rax, rax
+    jz .isInf
+
+    ; иначе NaN
+    ; === NaN case ===
+    lea r15, [saveBuffer]
+    mov byte [r15], 'N'
+    mov byte [r15+1], 'A'
+    mov byte [r15+2], 'N'
+    mov r14, 3
+
+    pop rdi 
+    pop rsi 
+    pop rdx
+    pop rcx 
+    pop rbx
+    pop rax
+    ret
+
+    .isInf:
+    lea r15, [saveBuffer]
+    mov byte [r15], 'I'
+    mov byte [r15+1], 'N'
+    mov byte [r15+2], 'F'
+    mov r14, 3
+
+    pop rdi 
+    pop rsi 
+    pop rdx
+    pop rcx 
+    pop rbx
+    pop rax
+    ret
+
+    .notSpecial:
 
     xor r14, r14
 
@@ -558,25 +575,28 @@ caseFloat:
     
     ; handle exp
 
-    mov r12, 7f800000h ; mask for exp    
+    mov r12, 0x7ff0000000000000 ; mask for exp    
     mov rcx, 8d    
     
     mov rax, r13
     and rax, r12
 
-    shr rax, 23d
+    shr rax, 52d
 
     mov rdx, rax
-    sub rdx, 127
+    sub rdx, 1023
     
     ; normalized case
 
     ; whole part
     mov rax, r13
-    and rax, 00ffffffh
-    or rax, 00800000h 
+    mov  r12, 0x000fffffffffffff
+    and rax, r12
 
-    mov r12, 00800000h
+    mov  r12, 0x0010000000000000
+    or rax, r12
+
+    mov  r12, 0010000000000000h 
     mov rcx, rdx
     mov rbx, r12 
     
@@ -586,7 +606,7 @@ caseFloat:
     loop .createMask 
 
     xor rcx, rcx
-    mov rcx, 23
+    mov rcx, 52
     sub rcx, rdx
 
     and rax, r12
@@ -597,8 +617,8 @@ caseFloat:
     ; saveToBuffer
     xor r14, r14
 
-    mov rcx, 24d
-    mov r12, 00800000h
+    mov rcx, 53d
+    mov r12, 0010000000000000h 
 
     .hexToASCIIWhlPrt:
         mov rax, r15
@@ -624,7 +644,7 @@ caseFloat:
     loop .fixOverfilledDigits
 
     ; mantis handle 
-    mov r12, 00400000h
+    mov r12, 0008000000000000h 
     ; which bits interpret as mantis
     mov rcx, rdx 
     shr r12, cl
@@ -679,7 +699,8 @@ caseFloat:
     rep movsb 
     
 
-    test r13d, 80000000h
+    mov r12, 0x8000000000000000
+    test r13, r12
     jz .notNegative 
         dec r14
         mov byte [r14], '-'
