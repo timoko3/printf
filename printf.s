@@ -676,63 +676,7 @@ casePercent:
     pop rsi 
     pop rax
     ret 
-caseBin:
-    push rax
-    push rcx
-    push rsi
-    push rdi
-
-    xor r14, r14
-    mov r15b, 0d  ; flag to start print digits
-
-    lea rdi, [saveBuffer]
-    mov rcx, 64d
-
-    mov r12, 8000000000000000h ; mask for reg nibble
-
-    .hexToASCII:
-        mov rax, r13
-        and rax, r12
-
-        mov rsi, rcx
-        sub rsi, 1d
-
-        push rcx 
-        mov rcx, rsi
-        shr rax, cl
-        pop rcx 
-
-        
-        ; block exist for printing only significant digits(don't print numbers till first non zero)
-        cmp al, 0d
-        je .skipChangeFlag
-            mov r15b, 1d
-        .skipChangeFlag:
-
-        call convertNibbleToASCII   
-
-        shr r12, 1
-
-        cmp r15b, 0d
-        je .notSignNum
-            stosb
-            inc r14
-        .notSignNum:
-    loop .hexToASCII
-
-    test r14, r14
-    jnz .notInc
-        mov rax, DIFFERENCE_NUM_ASCII_L9 
-        stosb
-        inc r14
-    .notInc:
-
-    pop rdi
-    pop rsi
-    pop rcx
-    pop rax
-
-    ret 
+ 
 caseChar:
     push rax
     push rsi
@@ -922,36 +866,38 @@ subTenPows:
     pop rbx
     ret 
 
+
+caseBin:
+    push rcx  ; pop int casePowTwo
+    mov rcx, 64d
+    mov r11, 1d
+    mov r12, 8000000000000000h
+    jmp maskAndShiftGiven
 caseOct:
+    push rcx  ; pop int casePowTwo
+    mov rcx, 21d
+    mov r11, 3d
+    mov r12, 07000000000000000h
+    jmp maskAndShiftGiven
+caseHex:
+    push rcx  ; pop int casePowTwo
+    mov rcx, 16d
+    mov r11, 4d
+    mov r12, 0f000000000000000h
+    jmp maskAndShiftGiven
+maskAndShiftGiven:
+
+    jmp casePowTwo
+    
+casePowTwo:
     push rax
-    push rcx
     push rsi
     push rdi
 
     xor r14, r14
-    mov r15b, 0d  ; flag to start print digits
+    mov r15b, 0d  ; flag to start print digits    
 
     lea rdi, [saveBuffer]
-    mov rcx, 21d
-
-    mov r12, 07000000000000000h ; mask for reg nibble
-
-    ; msb handle 
-    mov rax, r13
-    and rax, r12
-    shl rax, 63
-
-    cmp al, 0d
-    je .skipChangeFlagHighDig
-        mov r15b, 1d
-    .skipChangeFlagHighDig:
-
-    cmp r15b, 0d
-    je .notSignNumHighDig
-        add rax, DIFFERENCE_NUM_ASCII_L9 
-        stosb
-        inc r14
-    .notSignNumHighDig:
 
     .hexToASCII:
         mov rax, r13
@@ -959,14 +905,18 @@ caseOct:
 
         mov rsi, rcx
         sub rsi, 1d
-        lea rsi, [rsi + rsi * 2]
+
+        push rax 
+            mov rax, r11 
+            mul rsi
+            mov rsi, rax
+        pop  rax 
 
         push rcx 
         mov rcx, rsi
         shr rax, cl
         pop rcx 
 
-        
         ; block exist for printing only significant digits(don't print numbers till first non zero)
         cmp al, 0d
         je .skipChangeFlag
@@ -975,7 +925,12 @@ caseOct:
 
         call convertNibbleToASCII   
 
-        shr r12, 3
+        push rcx 
+        mov rcx, r11 
+
+        shr r12, cl
+
+        pop rcx 
 
         cmp r15b, 0d
         je .notSignNum
@@ -993,9 +948,207 @@ caseOct:
 
     pop rdi
     pop rsi
-    pop rcx
     pop rax
-    ret 
+    pop rcx
+
+    ret
+; caseBin:
+;     push rax
+;     push rcx
+;     push rsi
+;     push rdi
+
+;     xor r14, r14
+;     mov r15b, 0d  ; flag to start print digits
+
+;     lea rdi, [saveBuffer]
+;     mov rcx, 64d
+
+;     mov r12, 8000000000000000h ; mask for reg nibble
+
+;     .hexToASCII:
+;         mov rax, r13
+;         and rax, r12
+
+;         mov rsi, rcx
+;         sub rsi, 1d
+
+;         push rcx 
+;         mov rcx, rsi
+;         shr rax, cl
+;         pop rcx 
+
+        
+;         ; block exist for printing only significant digits(don't print numbers till first non zero)
+;         cmp al, 0d
+;         je .skipChangeFlag
+;             mov r15b, 1d
+;         .skipChangeFlag:
+
+;         call convertNibbleToASCII   
+
+;         shr r12, 1
+
+;         cmp r15b, 0d
+;         je .notSignNum
+;             stosb
+;             inc r14
+;         .notSignNum:
+;     loop .hexToASCII
+
+;     test r14, r14
+;     jnz .notInc
+;         mov rax, DIFFERENCE_NUM_ASCII_L9 
+;         stosb
+;         inc r14
+;     .notInc:
+
+;     pop rdi
+;     pop rsi
+;     pop rcx
+;     pop rax
+
+;     ret
+; caseOct:
+;     push rax
+;     push rcx
+;     push rsi
+;     push rdi
+
+;     xor r14, r14
+;     mov r15b, 0d  ; flag to start print digits
+
+;     lea rdi, [saveBuffer]
+;     mov rcx, 21d
+
+;     mov r12, 07000000000000000h ; mask for reg nibble
+
+;     ; msb handle 
+;     mov rax, r13
+;     and rax, r12
+;     shl rax, 63
+
+;     cmp al, 0d
+;     je .skipChangeFlagHighDig
+;         mov r15b, 1d
+;     .skipChangeFlagHighDig:
+
+;     cmp r15b, 0d
+;     je .notSignNumHighDig
+;         add rax, DIFFERENCE_NUM_ASCII_L9 
+;         stosb
+;         inc r14
+;     .notSignNumHighDig:
+
+;     .hexToASCII:
+;         mov rax, r13
+;         and rax, r12
+
+;         mov rsi, rcx
+;         sub rsi, 1d
+;         lea rsi, [rsi + rsi * 2]
+
+;         push rcx 
+;         mov rcx, rsi
+;         shr rax, cl
+;         pop rcx 
+
+        
+;         ; block exist for printing only significant digits(don't print numbers till first non zero)
+;         cmp al, 0d
+;         je .skipChangeFlag
+;             mov r15b, 1d
+;         .skipChangeFlag:
+
+;         call convertNibbleToASCII   
+
+;         shr r12, 3
+
+;         cmp r15b, 0d
+;         je .notSignNum
+;             stosb
+;             inc r14
+;         .notSignNum:
+;     loop .hexToASCII
+
+;     test r14, r14
+;     jnz .notInc
+;         mov rax, DIFFERENCE_NUM_ASCII_L9 
+;         stosb
+;         inc r14
+;     .notInc:
+
+;     pop rdi
+;     pop rsi
+;     pop rcx
+;     pop rax
+;     ret 
+
+; ;-----------------------------------------------------------------------
+; ; converts reg value to showable hex
+; ; Entry: r13 = argument specifier
+; ; Exit:  r14 = amount of symbols drawn 
+; ; Exp:   nop
+; ; Destr: r12, r13, r14, r15
+; ;-----------------------------------------------------------------------
+
+; caseHex:
+;     push rax
+;     push rcx
+;     push rsi
+;     push rdi
+
+;     xor r14, r14
+;     mov r15b, 0d  ; flag to start print digits
+
+;     lea rdi, [saveBuffer]
+;     mov rcx, 16d
+
+;     mov r12, 0f000000000000000h ; mask for reg nibble
+
+;     .hexToASCII:
+;         mov rax, r13
+;         and rax, r12
+
+;         mov rsi, rcx
+;         sub rsi, 1d
+;         shl rsi, 2
+
+;         push rcx 
+;         mov rcx, rsi
+;         shr rax, cl
+;         pop rcx 
+
+        
+;         ; block exist for printing only significant digits(don't print numbers till first non zero)
+;         cmp al, 0d
+;         je .skipChangeFlag
+;             mov r15b, 1d
+;         .skipChangeFlag:
+
+;         call convertNibbleToASCII   
+
+;         shr r12, 4
+
+;         cmp r15b, 0d
+;         je .notSignNum
+;             stosb
+;             inc r14
+;         .notSignNum:
+;     loop .hexToASCII
+
+;     test r14, r14
+;     jnz .notInc
+;         mov rax, DIFFERENCE_NUM_ASCII_L9 
+;         stosb
+;         inc r14
+;     .notInc:
+
+;     pop rdi
+;     pop rsi
+;     pop rcx
+;     pop rax
+;     ret
 caseString:
     push rdi
     push rsi
@@ -1018,71 +1171,6 @@ caseString:
     pop rdi
     ret 
 
-;-----------------------------------------------------------------------
-; converts reg value to showable hex
-; Entry: r13 = argument specifier
-; Exit:  r14 = amount of symbols drawn 
-; Exp:   nop
-; Destr: r12, r13, r14, r15
-;-----------------------------------------------------------------------
-
-caseHex:
-    push rax
-    push rcx
-    push rsi
-    push rdi
-
-    xor r14, r14
-    mov r15b, 0d  ; flag to start print digits
-
-    lea rdi, [saveBuffer]
-    mov rcx, 16d
-
-    mov r12, 0f000000000000000h ; mask for reg nibble
-
-    .hexToASCII:
-        mov rax, r13
-        and rax, r12
-
-        mov rsi, rcx
-        sub rsi, 1d
-        shl rsi, 2
-
-        push rcx 
-        mov rcx, rsi
-        shr rax, cl
-        pop rcx 
-
-        
-        ; block exist for printing only significant digits(don't print numbers till first non zero)
-        cmp al, 0d
-        je .skipChangeFlag
-            mov r15b, 1d
-        .skipChangeFlag:
-
-        call convertNibbleToASCII   
-
-        shr r12, 4
-
-        cmp r15b, 0d
-        je .notSignNum
-            stosb
-            inc r14
-        .notSignNum:
-    loop .hexToASCII
-
-    test r14, r14
-    jnz .notInc
-        mov rax, DIFFERENCE_NUM_ASCII_L9 
-        stosb
-        inc r14
-    .notInc:
-
-    pop rdi
-    pop rsi
-    pop rcx
-    pop rax
-    ret
 
 ;-----------------------------------------------------------------------
 ; converts number in nibble to ASCII
