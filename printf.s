@@ -6,6 +6,7 @@ global _start
 global myPrintfWrap
 
 extern printf 
+extern sprintf
 
 SPECIFIER_SYMBOL          equ '%'
 
@@ -531,6 +532,7 @@ caseFloat:
     push rdx 
     push rsi
     push rdi
+    push r8
 
     mov r12, 0x7ff0000000000000
     mov rax, r13
@@ -556,6 +558,7 @@ caseFloat:
     mov byte [r15+2], 'N'
     mov r14, 3
 
+    pop r8
     pop rdi 
     pop rsi 
     pop rdx
@@ -578,6 +581,7 @@ caseFloat:
         mov byte [r15], '-'
     .notNegativeInf:
 
+    pop r8
     pop rdi 
     pop rsi 
     pop rdx
@@ -617,7 +621,34 @@ caseFloat:
     sub rdx, 1023
 
     ; denormalized case
-    
+    cmp rax, 0d
+    jne .normalized
+
+        movq xmm0, r13
+        lea rsi, [deNormFloatCaseStr]
+        lea rdi, [saveBuffer]
+
+        mov rax, 1d
+        
+        ; sub rsp, 8d ;aling stack 
+        call sprintf wrt ..plt
+        ; add rsp, 8d
+
+        mov rax, 0d 
+
+        ; test value
+        mov r14, 12d
+
+        pop r8
+        pop rdi 
+        pop rsi 
+        pop rdx
+        pop rcx 
+        pop rbx
+        pop rax
+        ret
+    .normalized:
+
     ; normalized case
 
     ; whole part
@@ -738,6 +769,7 @@ caseFloat:
         mov byte [r14], '-'
     .notNegative:
 
+    pop r8
     pop rdi 
     pop rsi 
     pop rdx
@@ -1324,6 +1356,8 @@ floatPosBuffer     db FLOAT_BUFFER_SIZE dup(0),   NEW_LINE_SYM
 floatBuffer        db FLOAT_BUFFER_SIZE dup(30h), NEW_LINE_SYM
 
 xmmAmount          db 0
+
+deNormFloatCaseStr db "%g", 0x0
 
 wrongSpecifier:    db "ERROR: wrongSpecifier", 0x0a
 wrongSpecifierLen  equ $ - wrongSpecifier
