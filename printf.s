@@ -896,26 +896,27 @@ casePowTwo:
 
     lea rdi, [saveBuffer]
 
-    ; create mask 
-    mov r12, 1d 
-    mov rcx, r11
-    shl r12, cl
-    dec r12
-
     ; calculate shift 
     mov  rax, rcx
     imul rax, r11 
     sub  rax, r11 
     mov  rsi, rax
-
+    
+    ; create mask 
+    push rcx 
+    mov r12, 1d 
+    mov rcx, r11
+    shl r12, cl
+    dec r12
+    pop rcx 
 
     .hexToASCII:
         mov rax, r13
 
+        push rcx
         mov rcx, rsi
         shr rax, cl
-
-        imul rsi, r11
+        pop rcx
 
         and rax, r12
 
