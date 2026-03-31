@@ -906,11 +906,7 @@ casePowTwo:
         mov rsi, rcx
         sub rsi, 1d
 
-        push rax 
-            mov rax, r11 
-            mul rsi
-            mov rsi, rax
-        pop  rax 
+        imul rsi, r11
 
         push rcx 
         mov rcx, rsi
@@ -949,6 +945,7 @@ casePowTwo:
     pop rdi
     pop rsi
     pop rax
+    
     pop rcx
 
     ret
