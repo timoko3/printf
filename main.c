@@ -6,11 +6,13 @@ extern void myPrintfWrap(const char* format, ...);
 
 int main() {
     // goto start;
-    // printf("%g", 4.94e-324);
-    myPrintfWrap("%f\n", 1.0545e234);
+    // printf("%g\n\n", 3.0545e234);
+    // myPrintfWrap("%f\n", 3.0545e234);
+    myPrintfWrap("%f\n", 3.15);
+    // myPrintfWrap("%f\n", 3.15e-1);
 
     // myPrintfWrap("%f\n", -INFINITY);
-    // myPrintfWrap("%f\n", 3.626);
+    myPrintfWrap("%f\n", 3.626);
     // myPrintfWrap("%f\n", NAN);
     
     // myPrintfWrap("Hello world\n");

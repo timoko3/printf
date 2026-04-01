@@ -220,7 +220,7 @@ myPrintfWrap:
         mov rbx, 1 
     .aligned:
     mov al, [xmmAmount]
-    call printf wrt ..plt
+    ; call printf wrt ..plt
 
     cmp rbx, 1d
     je .restoreStack
@@ -622,8 +622,17 @@ caseFloat:
 
     ; denormalized case
     cmp rax, 0d
-    jne .normalized
+    je .denormalized
 
+    cmp rdx, 20d
+    jge .denormalized
+
+    cmp rdx, 0d
+    jl .denormalized
+
+    jmp .normalized
+
+    .denormalized:
         movq xmm0, r13
         lea rsi, [deNormFloatCaseStr]
         lea rdi, [saveBuffer]
