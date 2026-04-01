@@ -11,7 +11,7 @@ extern sprintf
 SPECIFIER_SYMBOL          equ '%'
 
 BUFFER_SIZE               equ 100d
-FLOAT_BUFFER_SIZE         equ 30d
+FLOAT_BUFFER_SIZE         equ 100d
 
 DIFFERENCE_NUM_ASCII_L9   equ 48d
 DIFFERENCE_NUM_ASCII_G9   equ 55d
@@ -646,7 +646,11 @@ caseFloat:
         mov rax, 0d 
 
         ; test value
-        mov r14, 12d
+
+        lea rsi, [saveBuffer]
+        call strlen
+
+        mov r14, rcx
 
         pop r8
         pop rdi 
@@ -1366,7 +1370,7 @@ floatBuffer        db FLOAT_BUFFER_SIZE dup(30h), NEW_LINE_SYM
 
 xmmAmount          db 0
 
-deNormFloatCaseStr db "%g", 0x0
+deNormFloatCaseStr db "%g", 0h
 
 wrongSpecifier:    db "ERROR: wrongSpecifier", 0x0a
 wrongSpecifierLen  equ $ - wrongSpecifier
