@@ -220,7 +220,7 @@ myPrintfWrap:
         mov rbx, 1 
     .aligned:
     mov al, [xmmAmount]
-    ; call printf wrt ..plt
+    call printf wrt ..plt
 
     cmp rbx, 1d
     je .restoreStack
@@ -541,8 +541,6 @@ caseFloat:
     cmp rax, r12
     jne .notSpecial
 
-    ; тут exp == all 1
-
     mov r12, 0x000fffffffffffff
     mov rax, r13
     and rax, r12
@@ -628,7 +626,7 @@ caseFloat:
     jge .denormalized
 
     cmp rdx, 0d
-    jl .denormalized
+    jle .denormalized
 
     jmp .normalized
 
@@ -668,6 +666,11 @@ caseFloat:
     mov rax, r13
     mov  r12, 0x000fffffffffffff
     and rax, r12
+
+    ; zero mantis case
+
+    cmp rax, 0d
+    jz .denormalized
 
     mov  r12, 0x0010000000000000
     or rax, r12
