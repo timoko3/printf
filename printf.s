@@ -533,6 +533,8 @@ caseFloat:
     push rsi
     push rdi
     push r8
+    push r9
+    push r10
 
     mov r12, 0x7ff0000000000000
     mov rax, r13
@@ -556,6 +558,8 @@ caseFloat:
     mov byte [r15+2], 'N'
     mov r14, 3
 
+    pop r10
+    pop r9
     pop r8
     pop rdi 
     pop rsi 
@@ -579,6 +583,8 @@ caseFloat:
         mov byte [r15], '-'
     .notNegativeInf:
 
+    pop r10
+    pop r9
     pop r8
     pop rdi 
     pop rsi 
@@ -661,6 +667,8 @@ caseFloat:
 
         mov r14, rcx
 
+        pop r10
+        pop r9
         pop r8
         pop rdi 
         pop rsi 
@@ -796,6 +804,8 @@ caseFloat:
         mov byte [r14], '-'
     .notNegative:
 
+    pop r10
+    pop r9
     pop r8
     pop rdi 
     pop rsi 

@@ -9,7 +9,7 @@ int main() {
     // myPrintfWrap("%f\n", 3.0545e234);
     // myPrintfWrap("%f\n", 3.15);
     // myPrintfWrap("%f\n", 1.0454);
-    myPrintfWrap("%f %f\n", 3.15, 35.14615e-123);
+    myPrintfWrap("%f %f %f\n", 3.15, 35.14615e-123, 5.0);
     myPrintfWrap("%f\n", 35.14615e-123);
 
     myPrintfWrap("%f\n", -INFINITY);
