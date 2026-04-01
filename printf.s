@@ -636,10 +636,21 @@ caseFloat:
         lea rdi, [saveBuffer]
 
         mov rax, 1d
-        
-        ; sub rsp, 8d ;aling stack 
+
+        test rsp, 15d
+        jz .aligned
+            sub rsp, 8d ;aling stack
+            mov byte [alignFlag], 1d 
+            jmp .sprintfPtr
+        .aligned:
+
+        mov byte [alignFlag], 0d
+        .sprintfPtr:
         call sprintf wrt ..plt
-        ; add rsp, 8d
+        cmp byte [alignFlag], 1d
+        jne .notBeenAligned
+            add rsp, 8d
+        .notBeenAligned:
 
         mov rax, 0d 
 
@@ -1359,6 +1370,7 @@ specifierHandlersJmpTable:
 
 ; fillStr db "love", 0x0
 
+alignFlag          db 0d
 testFloat          dd 07F800f00h
 
 partStrIndexes     db BUFFER_SIZE dup(0), NEW_LINE_SYM

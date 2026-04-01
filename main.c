@@ -6,10 +6,10 @@ extern void myPrintfWrap(const char* format, ...);
 
 int main() {
     // goto start;
-    myPrintfWrap("%f\n", 3.0545e234);
-    myPrintfWrap("%f\n", 3.15);
-    myPrintfWrap("%f\n", 1.0454);
-    myPrintfWrap("%f\n", 3.15e-1);
+    // myPrintfWrap("%f\n", 3.0545e234);
+    // myPrintfWrap("%f\n", 3.15);
+    // myPrintfWrap("%f\n", 1.0454);
+    myPrintfWrap("%f %f\n", 3.15, 35.14615e-123);
     myPrintfWrap("%f\n", 35.14615e-123);
 
     myPrintfWrap("%f\n", -INFINITY);
