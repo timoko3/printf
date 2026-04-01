@@ -1,8 +1,12 @@
 #include <stdio.h>
 #include <limits.h>
 #include <math.h>
+#include <stdarg.h>
+#include <assert.h> 
 
 extern void myPrintfWrap(const char* format, ...);
+
+void denormalizedFloatPrint(char* dest, double num);
 
 int main() {
     // goto start;
@@ -57,4 +61,10 @@ int main() {
     myPrintfWrap("\n");
 
     return 0;
+}
+
+void denormalizedFloatPrint(char* dest, double num){
+    assert(dest);
+
+    sprintf(dest, "%g", num);
 }

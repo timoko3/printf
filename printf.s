@@ -6,7 +6,7 @@ global _start
 global myPrintfWrap
 
 extern printf 
-extern sprintf
+extern denormalizedFloatPrint
 
 SPECIFIER_SYMBOL          equ '%'
 
@@ -652,7 +652,7 @@ caseFloat:
 
         mov byte [alignFlag], 0d
         .sprintfPtr:
-        call sprintf wrt ..plt
+        call denormalizedFloatPrint
         cmp byte [alignFlag], 1d
         jne .notBeenAligned
             add rsp, 8d
