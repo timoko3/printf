@@ -6,10 +6,12 @@ global _start
 global myPrintfWrap
 
 extern printf 
+extern denormalizedFloatPrint
 
 SPECIFIER_SYMBOL          equ '%'
 
 BUFFER_SIZE               equ 100d
+FLOAT_BUFFER_SIZE         equ 100d
 
 DIFFERENCE_NUM_ASCII_L9   equ 48d
 DIFFERENCE_NUM_ASCII_G9   equ 55d
@@ -19,7 +21,7 @@ END_STR_SYM               equ 0x0
 MAX_DEC_NUM_LEN           equ 20d
 
 FLOAT_BIAS                equ 127d
-FLOAT_AFTER_DOT_LEN	      equ 6d
+FLOAT_AFTER_DOT_LEN	          equ 6d
 
 ; _start:
 ;     push 0123
@@ -48,6 +50,9 @@ myPrintfWrap:
     push rbp 
     mov rbp, rsp 
 
+    lea r11, [xmmAmount]
+    mov byte [r11], al
+
     mov r14, rdx 
     mov r13, rdi
     mov r15, rsi
@@ -72,51 +77,114 @@ myPrintfWrap:
     mov rdi, r13
     mov rdx, r14
 
-
-
     mov rax, r12
     imul rax, 8
     sub rsp, rax 
 
-    xor r13, r13   ; index = 0
+    xor r13, r13   ; index default args = 0
+    xor r14, r14   ; non float     args = 0
+    xor r15, r15   ; index float   args = 0
 
-    cmp r13, r12
-    jge .argFillDone
-    mov [rsp + r13*8], rsi
-    inc r13
+    .passArgsLoop:
+        cmp r13, r12
+        jge .argFillDone
+        
+        lea r11, [floatPosBuffer]
 
-    cmp r13, r12
-    jge .argFillDone
-    mov [rsp + r13*8], rdx
-    inc r13
+        cmp byte [r11 + r13], 1d
+        je  .floatCase
 
-    cmp r13, r12
-    jge .argFillDone
-    mov [rsp + r13*8], rcx
-    inc r13
+    .intCase:
+        cmp r14, 0d 
+        je .useRsi
+        cmp r14, 1d    
+        je .useRdx
+        cmp r14, 2d    
+        je .useRcx
+        cmp r14, 3d    
+        je .useR8
+        cmp r14, 4d    
+        je .useR9
+        jmp .intFromStack
 
-    cmp r13, r12
-    jge .argFillDone
-    mov [rsp + r13*8], r8
-    inc r13
+    .useRsi:
+        mov rax, rsi
+        jmp .storeInt
+    .useRdx:
+        mov rax, rdx
+        jmp .storeInt
+    .useRcx:
+        mov rax, rcx
+        jmp .storeInt
+    .useR8:
+        mov rax, r8
+        jmp .storeInt
+    .useR9:
+        mov rax, r9
+        jmp .storeInt
 
-    cmp r13, r12
-    jge .argFillDone
-    mov [rsp + r13*8], r9
-    inc r13
-
-    mov r14, 0   ; stack index
-
-    .stackFillLoop:
-    cmp r13, r12
-    jge .argFillDone
-
-        mov rax, [rbp + 16 + r14*8]
-        mov [rsp + r13*8], rax
-
-        inc r13
+    .intFromStack:
+        mov rax, [rbp + 16 + (r14 - 5) * 8]
+    
+    .storeInt:
+        mov [rsp + r13 * 8], rax
         inc r14
-    jmp .stackFillLoop
+        inc r13 
+        jmp .passArgsLoop
+
+    .floatCase:
+        cmp r15, 0d 
+        je .useXMM0
+        cmp r15, 1d 
+        je .useXMM1
+        cmp r15, 2d 
+        je .useXMM2
+        cmp r15, 3d 
+        je .useXMM3
+        cmp r15, 4d
+        je .useXMM4
+        cmp r15, 5d
+        je .useXMM5
+        cmp r15, 6d
+        je .useXMM6
+        cmp r15, 7d
+        je .useXMM7
+
+        jmp .nextFloat
+        
+    .useXMM0:
+        movsd [rsp + r13 * 8], xmm0
+        jmp .nextFloat
+    .useXMM1:
+        movsd [rsp + r13 * 8], xmm1
+        jmp .nextFloat
+    .useXMM2:
+        movsd [rsp + r13 * 8], xmm2
+        jmp .nextFloat
+    .useXMM3:
+        movsd [rsp + r13 * 8], xmm3
+        jmp .nextFloat
+    .useXMM4:
+        movsd [rsp + r13 * 8], xmm4
+        jmp .nextFloat
+    .useXMM5:
+        movsd [rsp + r13 * 8], xmm5
+        jmp .nextFloat
+    .useXMM6:
+        movsd [rsp + r13 * 8], xmm6
+        jmp .nextFloat
+    .useXMM7:
+        movsd [rsp + r13 * 8], xmm7
+        jmp .nextFloat
+
+    .floatFromStack:
+        mov rax, [rsp + 16 + (r15 - 8) * 8]
+        mov [rsp + r13 * 8], rax
+
+    .nextFloat: 
+        inc r15     
+        inc r13         
+        jmp .passArgsLoop
 
     .argFillDone:
 
@@ -142,10 +210,27 @@ myPrintfWrap:
         mov  rax, 5d
         imul rax, 8
         add  rsp, rax
+
     .callStdPrintf:
-    
-    mov rax, 0d
+
+    mov rax, rsp
+    and rax, 15
+    jz .aligned
+        sub rsp, 8
+        mov rbx, 1 
+    .aligned:
+    mov al, [xmmAmount]
     call printf wrt ..plt
+
+    cmp rbx, 1d
+    je .restoreStack
+
+    jmp .doneCallStdPrintf
+
+    .restoreStack:
+        add rsp, 8
+
+    .doneCallStdPrintf:
 
     mov  rax, r12
     imul rax, 8
@@ -225,7 +310,7 @@ newPrintf:
 ; Exit:  rdx = amount str parts
 ;        rdi = amount specifiers
 ; Exp:   nop
-; Destr: rax, rbx, rcx, rdx, rsi, rdi, r8b 
+; Destr: rax, rbx, rcx, rdx, rsi, rdi, r8
 ;-----------------------------------------------------------------------
 countSpecifiers:
     push r8
@@ -241,6 +326,18 @@ countSpecifiers:
     jge ??endCycle
         cmp byte [rax + rcx], SPECIFIER_SYMBOL
         jne ??notSpecifier
+            ; saveFloatArgNum
+            cmp byte [rax + rcx + 1], 'f'
+            jne .notFloat
+                lea r8, [floatPosBuffer]
+                mov byte [r8 + rdi], 1d
+                jmp .float
+            .notFloat:
+                lea r8, [floatPosBuffer]
+                mov byte [r8 + rdi], 0d
+            .float: 
+            
+
             inc rdi
             lea rsi, [partStrIndexes]
 
@@ -428,30 +525,6 @@ handleSpecifier:
     ret 
 
 caseFloat:
-    ; is INF test 
-    cmp r13, 7f800000h
-    jne .notInfCase
-        lea r15, [saveBuffer]
-        mov byte [r15],     'I'
-        mov byte [r15 + 1], 'N'
-        mov byte [r15 + 2], 'F'
-
-        mov r14, 3d 
-        ret 
-    .notInfCase:
-
-    ; is NAN test
-    test r13, 7f800000h
-    jz .notNanCase
-        lea r15, [saveBuffer]
-        mov byte [r15],     'N'
-        mov byte [r15 + 1], 'A'
-        mov byte [r15 + 2], 'N'
-
-        mov r14, 3d 
-        ret 
-    .notNanCase:
-
 ; start main part of a function 
     push rax
     push rbx
@@ -459,41 +532,169 @@ caseFloat:
     push rdx 
     push rsi
     push rdi
+    push r8
+    push r9
+    push r10
 
+    mov r12, 0x7ff0000000000000
+    mov rax, r13
+    and rax, r12
+
+    cmp rax, r12
+    jne .notSpecial
+
+    mov r12, 0x000fffffffffffff
+    mov rax, r13
+    and rax, r12
+
+    test rax, rax
+    jz .isInf
+
+    ; иначе NaN
+    ; === NaN case ===
+    lea r15, [saveBuffer]
+    mov byte [r15],   'N'
+    mov byte [r15+1], 'A'
+    mov byte [r15+2], 'N'
+    mov r14, 3
+
+    pop r10
+    pop r9
+    pop r8
+    pop rdi 
+    pop rsi 
+    pop rdx
+    pop rcx 
+    pop rbx
+    pop rax
+    ret
+
+    .isInf:
+    lea r15, [saveBuffer]
+    mov byte [r15 + 1], 'I'
+    mov byte [r15 + 2], 'N'
+    mov byte [r15 + 3], 'F'
+    mov r14, 3
+
+    mov r12, 0x8000000000000000
+    test r13, r12
+    jz .notNegativeInf
+        inc r14 
+        mov byte [r15], '-'
+    .notNegativeInf:
+
+    pop r10
+    pop r9
+    pop r8
+    pop rdi 
+    pop rsi 
+    pop rdx
+    pop rcx 
+    pop rbx
+    pop rax
+    ret
+
+    .notSpecial:
+        
     xor r14, r14
 
-    lea rdi, [saveBuffer + MAX_DEC_NUM_LEN - 1d]
+    lea rdi, [saveBuffer  + MAX_DEC_NUM_LEN - 1d]
+    lea rsi, [floatBuffer + MAX_DEC_NUM_LEN - 1d]
 
     mov rcx, MAX_DEC_NUM_LEN    
     .prepareSaveBuffer: 
         not rcx
         add rcx, 1d
         mov byte [rdi + rcx + 1], DIFFERENCE_NUM_ASCII_L9
+        mov byte [rsi + rcx + 1], DIFFERENCE_NUM_ASCII_L9
         sub rcx, 1d
         not rcx
     loop .prepareSaveBuffer
     
     ; handle exp
 
-    mov r12, 7f800000h ; mask for exp    
+    mov r12, 0x7ff0000000000000 ; mask for exp    
     mov rcx, 8d    
     
     mov rax, r13
     and rax, r12
 
-    shr rax, 23d
+    shr rax, 52d
 
     mov rdx, rax
-    sub rdx, 127
-    
+    sub rdx, 1023
+
+    ; denormalized case
+    cmp rax, 0d
+    je .denormalized
+
+    cmp rdx, 20d
+    jge .denormalized
+
+    cmp rdx, 0d
+    jle .denormalized
+
+    jmp .normalized
+
+    .denormalized:
+        movq xmm0, r13
+        lea rsi, [deNormFloatCaseStr]
+        lea rdi, [saveBuffer]
+
+        mov rax, 1d
+
+        test rsp, 15d
+        jz .aligned
+            sub rsp, 8d ;aling stack
+            mov byte [alignFlag], 1d 
+            jmp .sprintfPtr
+        .aligned:
+
+        mov byte [alignFlag], 0d
+        .sprintfPtr:
+        call denormalizedFloatPrint
+        cmp byte [alignFlag], 1d
+        jne .notBeenAligned
+            add rsp, 8d
+        .notBeenAligned:
+
+        mov rax, 0d 
+
+        ; test value
+
+        lea rsi, [saveBuffer]
+        call strlen
+
+        mov r14, rcx
+
+        pop r10
+        pop r9
+        pop r8
+        pop rdi 
+        pop rsi 
+        pop rdx
+        pop rcx 
+        pop rbx
+        pop rax
+        ret
+    .normalized:
+
     ; normalized case
 
     ; whole part
     mov rax, r13
-    and rax, 00ffffffh
-    or rax, 00800000h 
+    mov  r12, 0x000fffffffffffff
+    and rax, r12
 
-    mov r12, 00800000h
+    ; zero mantis case
+
+    cmp rax, 0d
+    jz .denormalized
+
+    mov  r12, 0x0010000000000000
+    or rax, r12
+
+    mov  r12, 0010000000000000h 
     mov rcx, rdx
     mov rbx, r12 
     
@@ -503,7 +704,7 @@ caseFloat:
     loop .createMask 
 
     xor rcx, rcx
-    mov rcx, 23
+    mov rcx, 52
     sub rcx, rdx
 
     and rax, r12
@@ -514,8 +715,8 @@ caseFloat:
     ; saveToBuffer
     xor r14, r14
 
-    mov rcx, 24d
-    mov r12, 00800000h
+    mov rcx, 53d
+    mov r12, 0010000000000000h 
 
     .hexToASCIIWhlPrt:
         mov rax, r15
@@ -541,12 +742,12 @@ caseFloat:
     loop .fixOverfilledDigits
 
     ; mantis handle 
-    mov r12, 00400000h
+    mov r12, 0008000000000000h 
     ; which bits interpret as mantis
     mov rcx, rdx 
     shr r12, cl
 
-    mov rcx, 23d 
+    mov rcx, 52d 
     sub rcx, rdx
 
 
@@ -596,12 +797,16 @@ caseFloat:
     rep movsb 
     
 
-    test r13d, 80000000h
+    mov r12, 0x8000000000000000
+    test r13, r12
     jz .notNegative 
         dec r14
         mov byte [r14], '-'
     .notNegative:
 
+    pop r10
+    pop r9
+    pop r8
     pop rdi 
     pop rsi 
     pop rdx
@@ -622,7 +827,6 @@ mantisHandle:
     push r15
 
     lea rdi, [floatBuffer]
-    
 
     sub rcx, r15 
     not rcx
@@ -1028,7 +1232,9 @@ strlen:
 ;-----------------------------------------------------------------------
 ; fills buffer with 0 values
 ; Entry: rax = pointer to the begin of buffer
-; Exit:  rbx = length buffer
+;        rbx = length buffer
+;        cl  = symbol to clear with
+; Exit:  
 ; Exp:   dh = ensStr symbol ASCII code
 ; Destr: ah, cx, di
 ;-----------------------------------------------------------------------
@@ -1065,6 +1271,7 @@ specifierHandlersJmpTable:
 
 ; fillStr db "love", 0x0
 
+alignFlag          db 0d
 testFloat          dd 07F800f00h
 
 partStrIndexes     db BUFFER_SIZE dup(0), NEW_LINE_SYM
@@ -1074,7 +1281,12 @@ printBuffer:       db BUFFER_SIZE dup(0), NEW_LINE_SYM
 
 printBufferLen     equ $ - printBuffer
 
-floatBuffer        db 30 dup(30h), NEW_LINE_SYM
+floatPosBuffer     db FLOAT_BUFFER_SIZE dup(0),   NEW_LINE_SYM
+floatBuffer        db FLOAT_BUFFER_SIZE dup(30h), NEW_LINE_SYM
+
+xmmAmount          db 0
+
+deNormFloatCaseStr db "%g", 0h
 
 wrongSpecifier:    db "ERROR: wrongSpecifier", 0x0a
 wrongSpecifierLen  equ $ - wrongSpecifier

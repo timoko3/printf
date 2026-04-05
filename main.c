@@ -1,11 +1,25 @@
 #include <stdio.h>
 #include <limits.h>
+#include <math.h>
+#include <stdarg.h>
+#include <assert.h> 
+
 
 extern void myPrintfWrap(const char* format, ...);
 
+void denormalizedFloatPrint(char* dest, double num);
+
 int main() {
     // goto start;
-    myPrintfWrap("");
+    // myPrintfWrap("%f\n", 3.0545e234);
+    // myPrintfWrap("%f\n", 3.15);
+    // myPrintfWrap("%f\n", 1.0454);
+    myPrintfWrap("%f %f %f\n", 3.15, 35.14615e-123, 5.0);
+    myPrintfWrap("%f\n", 35.14615e-123);
+
+    myPrintfWrap("%f\n", -INFINITY);
+    myPrintfWrap("%f\n", 3.626);
+    myPrintfWrap("%f\n", NAN);
     
     myPrintfWrap("Hello world\n");
     myPrintfWrap("%d\n", 42);
@@ -34,8 +48,8 @@ int main() {
     myPrintfWrap("%b\n", 0);
 
     myPrintfWrap("%d %d %d %d %d %d\n", 1, 2, 3, 4, 5, 6);
-    start:
-    myPrintfWrap("%d%d%d%d%d %d %d %d %d %d %d %d %s %x %d%%%c%b meow meow %o\n", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, -1, "love", 3802, 100, 33, 126, 72);
+    
+    myPrintfWrap("%f %d%d%d%d%d \n", 145.2, 1, 2, 3, 4, 5);
 
     myPrintfWrap("%%%%%%\n");      
     myPrintfWrap("%d%d%d\n", 1,2,3);   
@@ -48,4 +62,10 @@ int main() {
     myPrintfWrap("\n");
 
     return 0;
+}
+
+void denormalizedFloatPrint(char* dest, double num){
+    assert(dest);
+    
+    sprintf(dest, "%g", num);
 }
