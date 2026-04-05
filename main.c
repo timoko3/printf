@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <assert.h> 
 
+
 extern void myPrintfWrap(const char* format, ...);
 
 void denormalizedFloatPrint(char* dest, double num);
@@ -65,6 +66,6 @@ int main() {
 
 void denormalizedFloatPrint(char* dest, double num){
     assert(dest);
-
+    
     sprintf(dest, "%g", num);
 }
